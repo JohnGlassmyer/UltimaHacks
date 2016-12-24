@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration strict="true" name="XMLConfigTest" packages="org.apache.logging.log4j.test">
+	<Properties>
+		<Property name="consoleLevel">INFO</Property>
+		<Property name="fileLevel">DEBUG</Property>
+	</Properties>
+
+	<Appenders>
+		<Appender name="stdout" type="Console" target="SYSTEM_OUT">
+			<Filter type="ThresholdFilter" level="${consoleLevel}" />
+			<Layout type="PatternLayout">
+				<Pattern>%m%n</Pattern>
+			</Layout>
+		</Appender>
+		<Appender name="file" type="File" fileName="ultimaPatcher.log">
+			<Filter type="ThresholdFilter" level="${fileLevel}" />
+			<Layout type="PatternLayout">
+				<Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+			</Layout>
+		</Appender>
+	</Appenders>
+
+	<Loggers>
+		<Root level="INFO">
+			<AppenderRef ref="file" />
+			<AppenderRef ref="stdout" />
+		</Root>
+	</Loggers>
+</Configuration>
