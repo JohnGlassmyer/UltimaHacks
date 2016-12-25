@@ -12,6 +12,7 @@ Added functionality:
 * cast spells by typing their magic rune letters in real-time (start by pressing the / (Slash) key)
   * remove the last typed rune with Backspace
   * accept the typed runes with Enter
+* use several bags to organize an inventory, as the amount of space taken up by a bag or backpack now depends upon its contents
 * press K to find and use the key for a selected door or chest
 * use many items by hotkey:
   * B: spellbook(s)
