@@ -1,4 +1,4 @@
-%include "include/UltimaPatcher.asm"
+%include "../UltimaPatcher.asm"
 %include "include/u7.asm"
 
 [bits 16]
