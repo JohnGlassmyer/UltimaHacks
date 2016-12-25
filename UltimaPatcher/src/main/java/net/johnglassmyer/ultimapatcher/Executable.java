@@ -98,7 +98,7 @@ class Executable {
 				L.info(textWithoutOverlayInfo + overlayInfoText);
 
 				// TODO: finish proc logging and add a command-line option to enable it
-				if (true) {
+				if (false) {
 					for (StubProc proc : overlay.stub.procs) {
 						L.info(String.format("    %04X", proc.startInOverlay));
 					}
