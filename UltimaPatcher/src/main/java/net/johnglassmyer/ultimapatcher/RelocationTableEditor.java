@@ -40,7 +40,8 @@ abstract class RelocationTableEditor {
 			}
 		}
 
-		for (Integer newRelocation : newRelocationSitesInFile) {
+		SortedSet<Integer> sortedNewSitesInFile = new TreeSet<>(newRelocationSitesInFile);
+		for (Integer newRelocation : sortedNewSitesInFile) {
 			if (!relocationSitesInFile.contains(newRelocation)) {
 				if (relocationSitesInFile.size() + 1 > capacity) {
 					throw new PatchApplicationException(String.format(
