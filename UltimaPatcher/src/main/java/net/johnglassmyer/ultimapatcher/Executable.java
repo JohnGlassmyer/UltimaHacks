@@ -30,12 +30,12 @@ class Executable {
 	final Path path;
 	final LoadModule loadModule;
 	final List<Segment> segments;
-	final long fileLength;
+	final int fileLength;
 	private final MzHeader mzHeader;
 	private final FbovHeader fbovHeader;
 
 	Executable(Path path,
-			long fileLength,
+			int fileLength,
 			MzHeader mzHeader,
 			LoadModule loadModule,
 			FbovHeader fbovHeader,
@@ -62,8 +62,8 @@ class Executable {
 		L.info("");
 
 		L.info(String.format("%d segments: (flags: C=code, O=overlay, D=data)", segments.size()));
-		L.info("index | base | stof | start  | flags | ovcods | ovcodl | rtabst | rt free/cap");
-		L.info("------+------+------+--------+-------+--------+--------+--------+-------------");
+		L.info("index | base | stof | start  | flags | ovcods | ovcodl | rtabst | rt f/ cap | space (procs)");
+		L.info("------+------+------+--------+-------+--------+--------+--------+-----------+--------------");
 		for (int iSegment = 0; iSegment < segments.size(); iSegment++) {
 			Segment segment = segments.get(iSegment);
 
@@ -71,8 +71,7 @@ class Executable {
 			String codeIndicator = segment.info.isCode() ? "C" : "-";
 			String overlayIndicator = segment.info.isOverlay() ? "O" : "-";
 			String dataIndicator = segment.info.isData() ? "D" : "-";
-			int startInFile = mzHeader.calculcateLoadModuleStartInFile()
-					+ segment.info.segmentBase * Util.PARAGRAPH_SIZE;
+			int startInFile = calculateSegmentStartInFile(segment);
 			String textWithoutOverlayInfo = String.format(
 					" %4d | %04X | %04X | %06X |  %s%s%s ",
 					iSegment,
@@ -88,13 +87,17 @@ class Executable {
 				RelocationTableEditor tableEditor = overlay.createRelocationTableEditor();
 				SortedSet<Integer> relocationSitesInFile = tableEditor.getOriginalRelocationSitesInFile();
 				int overlayRelocationCount = relocationSitesInFile.size();
+				int spareBytes = calculateSpareBytesAfterSegment(segment);
+				int procSpace = spareBytes < 0 ? 0 : spareBytes / StubProc.LENGTH;
 				String overlayInfoText = String.format(
-						" | %06X | %06X | %06X | %4d/%4d",
+						" | %06X | %06X | %06X | %4d/%4d | %5d (%3s  )",
 						overlay.getCodeStart(),
 						overlay.getCodeLength(),
 						tableEditor.getTableStartInFile(),
 						tableEditor.getCapacity() - overlayRelocationCount,
-						tableEditor.getCapacity());
+						tableEditor.getCapacity(),
+						spareBytes,
+						procSpace == 0 ? "-" : Integer.toString(procSpace));
 				L.info(textWithoutOverlayInfo + overlayInfoText);
 
 				// TODO: finish proc logging and add a command-line option to enable it
@@ -107,6 +110,26 @@ class Executable {
 				L.info(textWithoutOverlayInfo);
 			}
 		}
+	}
+
+	private int calculateSegmentStartInFile(Segment segment) {
+		return mzHeader.calculcateLoadModuleStartInFile()
+				+ segment.info.segmentBase * Util.PARAGRAPH_SIZE;
+	}
+
+	private int calculateSpareBytesAfterSegment(Segment segment) {
+		int segmentEnd = calculateSegmentStartInFile(segment) + segment.info.getLength();
+
+		int spareBytesEnd;
+		int segmentIndex = segments.indexOf(segment);
+		if (segmentIndex < segments.size() - 1) {
+			Segment followingSegment = segments.get(segmentIndex + 1);
+			spareBytesEnd = calculateSegmentStartInFile(followingSegment);
+		} else {
+			spareBytesEnd = fileLength;
+		}
+
+		return spareBytesEnd - segmentEnd;
 	}
 
 	private void logPathAndFileLength() {
@@ -210,15 +233,13 @@ class Executable {
 		Overlay overlay = segment.optionalOverlay.get();
 		OverlayStub stub = overlay.stub;
 
-		int stubEnd = stub.startInFile
-				+ OverlayStub.HEADER_LENGTH
-				+ stub.procs.size() * StubProc.LENGTH;
-		int paragraphEnd = Util.roundUpToParagraph(stubEnd);
-		int addedProcCount = (paragraphEnd - stubEnd) / StubProc.LENGTH;
-		L.info("Stub has room for {} additional procs.", addedProcCount);
-		if (addedProcCount < 1) {
+		int spareBytes = calculateSpareBytesAfterSegment(segment);
+		if (spareBytes < StubProc.LENGTH) {
 			throw new PatchApplicationException("No room in overlay for more procs.");
 		}
+
+		int addedProcCount = spareBytes / StubProc.LENGTH;
+		L.info("Stub has room for {} additional procs.", addedProcCount);
 
 		int codeLength = overlay.getCodeLength();
 

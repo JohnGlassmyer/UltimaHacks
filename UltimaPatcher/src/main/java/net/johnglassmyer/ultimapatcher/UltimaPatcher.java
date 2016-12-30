@@ -387,7 +387,8 @@ public class UltimaPatcher {
 		}
 		Collections.reverse(segments);
 
-		return new Executable(exePath, file.length(), mzHeader, loadModule, fbovHeader, segments);
+		return new Executable(
+				exePath, (int) file.length(), mzHeader, loadModule, fbovHeader, segments);
 	}
 
 	private static List<Integer> parseMzRelocationsInLoadModule(byte[] relocationTableBytes) {
