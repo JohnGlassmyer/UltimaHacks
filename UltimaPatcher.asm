@@ -63,8 +63,9 @@
 %endmacro
 
 ; calculates the delta to a location outside of the local code block
-%define calcJump(targetAbsolute) $+(targetAbsolute - startAbsolute - (($-$$) - startRelative))
-
+%define calcJump(targetAbsolute) \
+        $+(targetAbsolute - startAbsolute - (($-$$) - startRelative))
+        
 ; callWithRelocation 0xssss:0xoooo
 ; makes note of the site to be included in relocation metadata
 %macro callWithRelocation 1
@@ -75,9 +76,10 @@
     %assign relocationCount relocationCount + 1
 %endmacro
 
-%macro relocateFollowingWord 0
+%macro pushWithRelocation 1
     %push relocation
-    %assign %$relocationOffset 0
+    %assign %$relocationOffset 1
     %$relocationBase:
+    push strict word %1
     %assign relocationCount relocationCount + 1
 %endmacro
