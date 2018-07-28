@@ -6,7 +6,7 @@ import java.io.RandomAccessFile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class InsertEdit extends Edit {
+class InsertEdit extends Edit {
 	static private final Logger L = LogManager.getLogger(InsertEdit.class);
 
 	private final int positionInFile;

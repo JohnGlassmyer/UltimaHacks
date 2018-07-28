@@ -11,16 +11,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.stream.IntStream;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -62,8 +60,8 @@ class Executable {
 		L.info("");
 
 		L.info(String.format("%d segments: (flags: C=code, O=overlay, D=data)", segments.size()));
-		L.info("index | base | stof | start  | flags | ovcods | ovcodl | rtabst | rt f/ cap | space (procs)");
-		L.info("------+------+------+--------+-------+--------+--------+--------+-----------+--------------");
+		L.info("index | base | stof | start  | flags | sp (p) | ovcods | ovcodl | rtabst | rt f/ cap");
+		L.info("------+------+------+--------+-------+--------+--------+--------+--------+----------");
 		for (int iSegment = 0; iSegment < segments.size(); iSegment++) {
 			Segment segment = segments.get(iSegment);
 
@@ -90,14 +88,14 @@ class Executable {
 				int spareBytes = calculateSpareBytesAfterSegment(segment);
 				int procSpace = spareBytes < 0 ? 0 : spareBytes / StubProc.LENGTH;
 				String overlayInfoText = String.format(
-						" | %06X | %06X | %06X | %4d/%4d | %5d (%3s  )",
+						" | %2d (%1d) | %06X | %06X | %06X | %4d/%4d ",
+						spareBytes,
+						procSpace,
 						overlay.getCodeStart(),
 						overlay.getCodeLength(),
 						tableEditor.getTableStartInFile(),
 						tableEditor.getCapacity() - overlayRelocationCount,
-						tableEditor.getCapacity(),
-						spareBytes,
-						procSpace == 0 ? "-" : Integer.toString(procSpace));
+						tableEditor.getCapacity());
 				L.info(textWithoutOverlayInfo + overlayInfoText);
 
 				// TODO: finish proc logging and add a command-line option to enable it
@@ -118,17 +116,16 @@ class Executable {
 	}
 
 	private int calculateSpareBytesAfterSegment(Segment segment) {
-		int segmentEnd = calculateSegmentStartInFile(segment) + segment.info.getLength();
+		int segmentStart = calculateSegmentStartInFile(segment);
 
-		int spareBytesEnd;
-		int segmentIndex = segments.indexOf(segment);
-		if (segmentIndex < segments.size() - 1) {
-			Segment followingSegment = segments.get(segmentIndex + 1);
-			spareBytesEnd = calculateSegmentStartInFile(followingSegment);
-		} else {
-			spareBytesEnd = fileLength;
-		}
+		NavigableSet<Integer> segmentStarts = new TreeSet<>();
+		segments.stream().map(this::calculateSegmentStartInFile).forEach(segmentStarts::add);
+		Optional<Integer> optionalFollowingSegmentStart =
+				Optional.ofNullable(segmentStarts.higher(segmentStart));
 
+		int spareBytesEnd = optionalFollowingSegmentStart.orElse(fileLength);
+
+		int segmentEnd = segmentStart + segment.info.getLength();
 		return spareBytesEnd - segmentEnd;
 	}
 
@@ -218,75 +215,107 @@ class Executable {
 		return relocationFileOffsets;
 	}
 
-	List<Edit> expandLastOverlay() throws PatchApplicationException {
-		OptionalInt optionalLastOverlaySegmentIndex = IntStream.range(0, segments.size())
-				.filter(i -> segments.get(i).optionalOverlay.isPresent())
-				.reduce((i1, i2) -> i2);
-		if (!optionalLastOverlaySegmentIndex.isPresent()) {
-			throw new PatchApplicationException("Executable has no overlays.");
+	List<Edit> expandOverlay(int segmentIndex, int newOverlayLength)
+			throws PatchApplicationException {
+		if (segmentIndex > segments.size()) {
+			throw new PatchApplicationException(
+					String.format("No segment %d in executable.", segmentIndex));
 		}
 
-		int segmentIndex = optionalLastOverlaySegmentIndex.getAsInt();
-		Segment segment = segments.get(segmentIndex);
-		L.info("Segment {} is last overlay segment.", segmentIndex);
+		Segment stubSegment = segments.get(segmentIndex);
+		if (!stubSegment.optionalOverlay.isPresent()) {
+			throw new PatchApplicationException(
+					String.format("Segment %d is not an overlay segment.", segmentIndex));
+		}
 
-		Overlay overlay = segment.optionalOverlay.get();
+		L.info("Attempting to expand overlay segment {}.", segmentIndex);
+
+		Overlay overlay = stubSegment.optionalOverlay.get();
 		OverlayStub stub = overlay.stub;
 
-		int spareBytes = calculateSpareBytesAfterSegment(segment);
+		int spareBytes = calculateSpareBytesAfterSegment(stubSegment);
 		if (spareBytes < StubProc.LENGTH) {
-			throw new PatchApplicationException("No room in overlay for more procs.");
+			throw new PatchApplicationException(String.format(
+					"No room in segment %s overlay stub for more procs.", segmentIndex));
 		}
 
 		int addedProcCount = spareBytes / StubProc.LENGTH;
 		L.info("Stub has room for {} additional procs.", addedProcCount);
 
-		int codeLength = overlay.getCodeLength();
-
 		/**
-		 * Ultima VII code seems to use around 1 relocation per 50 code bytes. For a full (0x10000)
-		 * segment of code + relocations, that means about 0xF630 code bytes and 0x9D0 relocation
-		 * bytes.
+		 * Ultima VII code seems to use around 1 relocation (2 bytes) per 50 code bytes.
 		 */
-		// TODO: Code or relocation table might already be longer than this value;
-		// results here would be negative.
-		int addedCodeLength = 0xF630 - codeLength;
-		int addedRelocationTableLength = 0x9D0 - stub.relocationTableByteCount;
+		double codeFraction = 50 / (double) 52;
+		int newCodeLength = (int) (newOverlayLength * codeFraction);
+		int newRelocationTableLength = newOverlayLength - newCodeLength;
+		L.info(String.format("New overlay code length is 0x%X", newCodeLength));
+		L.info(String.format("New relocation table length is 0x%X", newRelocationTableLength));
+		if (newCodeLength < overlay.getCodeLength()) {
+			throw new PatchApplicationException("New code length < old code length.");
+		}
+		if (newRelocationTableLength < stub.relocationTableByteCount) {
+			throw new PatchApplicationException(
+					"New relocation table length < old relocation table length.");
+		}
 
-		L.info("Offsets of new procs in overlay segment:");
+		// TODO: don't move the start of the overlay if it is already the last thing in the file
+		L.info(String.format("Overlay will be moved to start at 0x%X", fileLength));
+
+		L.info("New procs (stub proc -> overlay proc):");
 		List<Integer> procStartsInOverlay = new ArrayList<>();
-		// Apportion added code bytes equally (mod paragraph alignment) among added procs.
-		int equalProcCodeLength = Util.roundUpToParagraph(addedCodeLength / addedProcCount);
-		int accumulatedCodeLength = 0;
-		for (int iProc = 0; iProc < addedProcCount; iProc++) {
-			int procStartInOverlay = codeLength + accumulatedCodeLength;
+		// Space the added procs at 0x100-byte intervals in the overlay code segment.
+		for (int iAddedProc = 0; iAddedProc < addedProcCount; iAddedProc++) {
+			int procStartInOverlay = overlay.getCodeLength() + iAddedProc * 0x100;
 			procStartsInOverlay.add(procStartInOverlay);
-			L.info(new HexValueMessage(procStartInOverlay));
-
-			int procCodeLength = (iProc < addedProcCount - 1)
-					? equalProcCodeLength : addedCodeLength - accumulatedCodeLength;
-			accumulatedCodeLength += procCodeLength;
+			int stubProcOffset =
+					OverlayStub.HEADER_LENGTH + (stub.procs.size() + iAddedProc) * StubProc.LENGTH;
+			L.info(String.format(
+					"0x%04X:0x%04X / 0x%04X:0x%04X -> eop:0x%04X",
+					stubSegment.info.segmentBase,
+					stubProcOffset,
+					segmentIndex * SegmentInfo.LENGTH,
+					stubProcOffset,
+					procStartInOverlay));
 		}
 
 		List<Edit> edits = new ArrayList<>();
+		{
+			/**
+			 * edit to FBOV header: increase overlay code size
+			 */
+			int editStartInFile = mzHeader.calculateMzFileSize()
+					+ FbovHeader.OVERLAY_BYTE_COUNT_OFFSET;
+			ByteBuffer buffer = bufferWrappingBytes(4);
+			int newOverlayByteCount = fbovHeader.overlayByteCount + newOverlayLength;
+			buffer.putInt(newOverlayByteCount);
+			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
+		}
 		{
 			/**
 			 * edit to segment table: increase length of stub segment
 			 */
 			int editStartInFile = fbovHeader.segmentTableStartInFile
 					+ segmentIndex * SegmentInfo.LENGTH
-					+ SegmentInfo.END_OFFSET_LENGTH;
+					+ SegmentInfo.END_OFFSET_OFFSET;
 			ByteBuffer buffer = bufferWrappingBytes(2);
-			buffer.putShort((short) (segment.info.endOffset + addedProcCount * StubProc.LENGTH));
+			int newStubEndOffset = stubSegment.info.endOffset + addedProcCount * StubProc.LENGTH;
+			buffer.putShort((short) newStubEndOffset);
 			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
 		}
 		{
 			/**
-			 * edits to stub header: - increase code size - increase proc count
+			 * edit to stub header:
+			 * - set overlay start to current end of file
+			 * - increase code size
+			 * - (leave relocation byte count as-is)
+			 * - increase proc count
 			 */
-			int editStartInFile = stub.startInFile + 8;
-			ByteBuffer buffer = bufferWrappingBytes(6);
-			buffer.putShort((short) (stub.codeSize + addedCodeLength));
+			int editStartInFile = stub.startInFile + 4;
+			ByteBuffer buffer = bufferWrappingBytes(10);
+			int newOverlayStartFromFbovEnd =
+					fileLength - (mzHeader.calculateMzFileSize() + FbovHeader.LENGTH);
+			buffer.putInt(newOverlayStartFromFbovEnd);
+			buffer.putShort((short) (newCodeLength));
 			buffer.putShort((short) (stub.relocationTableByteCount));
 			buffer.putShort((short) (stub.procs.size() + addedProcCount));
 			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
@@ -305,20 +334,33 @@ class Executable {
 		}
 		{
 			/**
-			 * edits to overlay: - insert bytes after relocation table - insert bytes before
-			 * relocation table - set bytes at proc starts to 0xCB (retf instruction)
+			 * new overlay edits:
+			 * - insert new code length + new relocation table length at end of file
+			 * - copy overlay code to end of file
+			 * - copy overlay relocation table to end of file
+			 * - set bytes at proc starts to 0xCB (retf instruction)
 			 */
-			int overlayCodeEnd = overlay.getCodeStart() + codeLength;
-			int relocationTableEnd = overlayCodeEnd + stub.relocationTableByteCount;
-			edits.add(new InsertEdit(relocationTableEnd, addedRelocationTableLength));
-			edits.add(new InsertEdit(overlayCodeEnd, addedCodeLength));
+			edits.add(new InsertEdit(fileLength, newOverlayLength));
+			edits.add(new CopyEdit(overlay.getCodeStart(), overlay.getCodeLength(), fileLength));
+			edits.add(new CopyEdit(
+					overlay.getCodeStart() + overlay.getCodeLength(),
+					stub.relocationTableByteCount,
+					fileLength + newCodeLength));
 
 			for (int procStartInOverlay : procStartsInOverlay) {
-				int procStartInFile = overlay.getCodeStart() + procStartInOverlay;
+				int procStartInFile = fileLength + procStartInOverlay;
 				edits.add(new OverwriteEdit(procStartInFile, new byte[] {
 						(byte) 0xCB
 				}));
 			}
+		}
+		{
+			/**
+			 * old overlay edit: zero-out old code and relocation table
+			 */
+			// TODO
+//			new byte[]
+//			edits.add(new OverwriteEdit(overlay.getCodeStart(), replacementBytes))
 		}
 
 		// Assuming that there's nothing in the file after the last overlay.

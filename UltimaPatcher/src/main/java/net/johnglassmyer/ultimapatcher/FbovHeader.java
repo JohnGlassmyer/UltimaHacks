@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 
 class FbovHeader {
 	static final int LENGTH = 16;
+	static final int OVERLAY_BYTE_COUNT_OFFSET = 4;
 	static private final String FBOV_SIGNATURE = "FBOV";
 	static private final Logger L = LogManager.getLogger(FbovHeader.class);
 

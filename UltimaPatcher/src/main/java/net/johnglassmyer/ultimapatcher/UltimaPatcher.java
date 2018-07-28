@@ -13,17 +13,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,23 +41,38 @@ import joptsimple.OptionSpec;
  */
 public class UltimaPatcher {
 	static class Options {
-		static private Options parseFromCommandLine(String[] args) throws OptionException {
+		static Options parseFromCommandLine(String[] args) throws OptionException {
 			OptionParser optionParser = new OptionParser();
 
-			OptionSpec<String> exeOption = optionParser.accepts("exe")
-					.withRequiredArg();
-			OptionSpec<Void> showRelocationDetailsOption = optionParser.accepts("show_relocation_details")
-					.availableIf(exeOption);
+			OptionSpec<String> exeOption =
+					optionParser.accepts("exe")
+							.withRequiredArg();
 
-			OptionSpec<String> patchOption = optionParser.accepts("patch")
-					.requiredUnless(exeOption)
-					.withRequiredArg();
-			OptionSpec<Void> showPatchBytesOption = optionParser.accepts("show_patch_bytes")
-					.availableIf(patchOption);
+			OptionSpec<Void> showRelocationDetailsOption =
+					optionParser.accepts("show_relocation_details")
+							.availableIf(exeOption);
 
-			OptionSpec<Void> expandLastOverlayOption = optionParser.accepts("expand_last_overlay")
-					.availableIf(exeOption)
-					.availableUnless(patchOption);
+			OptionSpec<String> patchOption =
+					optionParser.accepts("patch")
+							.requiredUnless(exeOption)
+							.withRequiredArg();
+
+			OptionSpec<Void> showPatchBytesOption =
+					optionParser.accepts("show_patch_bytes")
+							.availableIf(patchOption);
+
+			OptionSpec<Integer> expandOverlayIndexOption =
+					optionParser.accepts("expand_overlay_index")
+							.availableIf(exeOption)
+							.availableUnless(patchOption)
+							.withRequiredArg()
+							.ofType(Integer.class);
+
+			OptionSpec<String> expandOverlayLengthOption =
+					optionParser.accepts("expand_overlay_length")
+							.availableIf(expandOverlayIndexOption)
+							.requiredIf(expandOverlayIndexOption)
+							.withRequiredArg();
 
 			OptionSpec<Void> ignoreTargetFileLengthOption =
 					optionParser.accepts("ignore_target_file_length")
@@ -69,7 +85,8 @@ public class UltimaPatcher {
 					getOptionally(optionSet, patchOption),
 					optionSet.has(showRelocationDetailsOption),
 					optionSet.has(showPatchBytesOption),
-					optionSet.has(expandLastOverlayOption),
+					getOptionally(optionSet, expandOverlayIndexOption),
+					getOptionally(optionSet, expandOverlayLengthOption),
 					optionSet.has(ignoreTargetFileLengthOption));
 		}
 
@@ -85,7 +102,8 @@ public class UltimaPatcher {
 		final Optional<String> optionalPatchPath;
 		final boolean showRelocationDetails;
 		final boolean showPatchBytes;
-		final boolean expandLastOverlay;
+		final Optional<Integer> optionalExpandOverlayIndex;
+		final Optional<String> optionalExpandOverlayLength;
 		final boolean ignoreTargetFileLength;
 
 		Options(
@@ -93,13 +111,15 @@ public class UltimaPatcher {
 				Optional<String> optionalPatchPath,
 				boolean showRelocationDetails,
 				boolean showPatchBytes,
-				boolean expandLastOverlay,
+				Optional<Integer> optionalExpandOverlayIndex,
+				Optional<String> optionalExpandOverlayLength,
 				boolean ignoreTargetFileLength) {
 			this.optionalExePath = optionalExePath;
 			this.optionalPatchPath = optionalPatchPath;
 			this.showRelocationDetails = showRelocationDetails;
 			this.showPatchBytes = showPatchBytes;
-			this.expandLastOverlay = expandLastOverlay;
+			this.optionalExpandOverlayIndex = optionalExpandOverlayIndex;
+			this.optionalExpandOverlayLength = optionalExpandOverlayLength;
 			this.ignoreTargetFileLength = ignoreTargetFileLength;
 		}
 	}
@@ -154,16 +174,19 @@ public class UltimaPatcher {
 		} else if (optionalExecutable.isPresent()) {
 			Executable executable = optionalExecutable.get();
 
-			if (options.expandLastOverlay) {
+			if (options.optionalExpandOverlayIndex.isPresent()) {
+				int expandOverlayIndex = options.optionalExpandOverlayIndex.get();
+				int expandOverlayLength = Integer.decode(options.optionalExpandOverlayLength.get());
+
 				executable.logSummary();
 
 				Collection<Edit> edits;
 				try {
-					edits = executable.expandLastOverlay();
+					edits = executable.expandOverlay(expandOverlayIndex, expandOverlayLength);
 				} catch (PatchApplicationException e) {
 					L.error(e);
 
-					throw new RuntimeException("Cannot expand last overlay.", e);
+					throw new RuntimeException("Cannot expand overlay.", e);
 				}
 
 				applyEdits(executable.path, edits);
@@ -183,8 +206,9 @@ public class UltimaPatcher {
 		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> [--show_relocation_details]");
 		L.info("For patch info:");
 		L.info("  java -jar UltimaPatcher.jar --patch=<patchFile> [--show_patch_bytes]");
-		L.info("To add as many procs as possible to the executable's last overlay:");
-		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> --expand_last_ovelay");
+		L.info("To move an overlay to the end of the file and lengthen it:");
+		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> "
+				+ "--expand_overlay_index=<segmentIndex> --expand_overlay_length=<newLength>");
 		L.info("To apply patch to executable:");
 		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> --patch=<patchFile>");
 	}
@@ -336,9 +360,9 @@ public class UltimaPatcher {
 		RandomAccessFile file = new RandomAccessFile(exePath.toFile(), "r");
 
 		MzHeader mzHeader = MzHeader.parseFromBytes(Util.readBytes(file, 0, MzHeader.LENGTH));
-
+		int mzRelocationTableLength = mzHeader.relocationCount * 4;
 		List<Integer> mzRelocationsInLoadModule = parseMzRelocationsInLoadModule(
-				Util.readBytes(file, mzHeader.relocationTableStartInFile, mzHeader.relocationCount * 4));
+				Util.readBytes(file, mzHeader.relocationTableStartInFile, mzRelocationTableLength));
 		LoadModule loadModule = new LoadModule(mzHeader, mzRelocationsInLoadModule);
 
 		FbovHeader fbovHeader = FbovHeader
@@ -348,44 +372,54 @@ public class UltimaPatcher {
 		long segmentInfoStart = fbovHeader.segmentTableStartInFile;
 		int fbovHeaderEnd = mzHeader.calculateMzFileSize() + FbovHeader.LENGTH;
 		for (int iSegment = 0; iSegment < fbovHeader.segmentCount; iSegment++) {
-			segmentInfos.add(SegmentInfo.parseFrom(Util.readBytes(file, segmentInfoStart, SegmentInfo.LENGTH)));
+			segmentInfos.add(SegmentInfo.parseFrom(
+					Util.readBytes(file, segmentInfoStart, SegmentInfo.LENGTH)));
 
 			segmentInfoStart += SegmentInfo.LENGTH;
 		}
 
 		// Assuming that each overlay ends where the next overlay starts,
 		// or at the end of the file.
-		List<Segment> segments = new ArrayList<>();
-		ListIterator<SegmentInfo> iterator = segmentInfos.listIterator(segmentInfos.size());
-		int followingOverlayStart = (int) file.length();
-		while (iterator.hasPrevious()) {
-			SegmentInfo segmentInfo = iterator.previous();
-
-			Optional<Overlay> optionalOverlay;
+		NavigableSet<Integer> overlayStarts = new TreeSet<>();
+		Map<SegmentInfo, OverlayStub> overlayStubForSegmentInfo = new HashMap<>();
+		for (SegmentInfo segmentInfo : segmentInfos) {
 			if (segmentInfo.isOverlay()) {
 				int stubStart = mzHeader.calculcateLoadModuleStartInFile()
 						+ segmentInfo.segmentBase * Util.PARAGRAPH_SIZE;
-				OverlayStub stubHeader = OverlayStub.create(
+				OverlayStub stub = OverlayStub.create(
 						stubStart, Util.readBytes(file, stubStart, segmentInfo.getLength()));
 
-				int overlayStart = fbovHeaderEnd + stubHeader.overlayStartFromFbovEnd;
+				overlayStubForSegmentInfo.put(segmentInfo, stub);
 
-				int tableStart = overlayStart + stubHeader.codeSize;
+				overlayStarts.add(fbovHeaderEnd + stub.overlayStartFromFbovEnd);
+			}
+		}
+
+		List<Segment> segments = new ArrayList<>();
+		for (SegmentInfo segmentInfo : segmentInfos) {
+			Optional<Overlay> optionalOverlay;
+			if (overlayStubForSegmentInfo.containsKey(segmentInfo)) {
+				OverlayStub stub = overlayStubForSegmentInfo.get(segmentInfo);
+
+				int overlayStart = fbovHeaderEnd + stub.overlayStartFromFbovEnd;
+
+				int tableStart = overlayStart + stub.codeSize;
 				byte[] relocationTableBytes = Util.readBytes(
-						file, tableStart, stubHeader.relocationTableByteCount);
+						file, tableStart, stub.relocationTableByteCount);
 
-				int overlayEnd = followingOverlayStart;
-				followingOverlayStart = overlayStart;
+				// The overlay ends where the following overlay starts, or where the file ends.
+				int tableEnd = tableStart + stub.relocationTableByteCount;
+				int overlayEnd = Optional.ofNullable(overlayStarts.ceiling(tableEnd))
+						.orElse((int) file.length());
 
 				optionalOverlay = Optional.of(
-						new Overlay(stubHeader, overlayStart, overlayEnd, relocationTableBytes));
+						new Overlay(stub, overlayStart, overlayEnd, relocationTableBytes));
 			} else {
 				optionalOverlay = Optional.empty();
 			}
 
 			segments.add(new Segment(segmentInfo, optionalOverlay));
 		}
-		Collections.reverse(segments);
 
 		return new Executable(
 				exePath, (int) file.length(), mzHeader, loadModule, fbovHeader, segments);
