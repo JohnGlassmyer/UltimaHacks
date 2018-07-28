@@ -82,7 +82,7 @@ public class UltimaPatcher {
 
 			return new Options(
 					getOptionally(optionSet, exeOption),
-					getOptionally(optionSet, patchOption),
+					optionSet.valuesOf(patchOption),
 					optionSet.has(showRelocationDetailsOption),
 					optionSet.has(showPatchBytesOption),
 					getOptionally(optionSet, expandOverlayIndexOption),
@@ -99,7 +99,7 @@ public class UltimaPatcher {
 		}
 
 		final Optional<String> optionalExePath;
-		final Optional<String> optionalPatchPath;
+		final List<String> patchPaths;
 		final boolean showRelocationDetails;
 		final boolean showPatchBytes;
 		final Optional<Integer> optionalExpandOverlayIndex;
@@ -108,14 +108,14 @@ public class UltimaPatcher {
 
 		Options(
 				Optional<String> optionalExePath,
-				Optional<String> optionalPatchPath,
+				List<String> patchPaths,
 				boolean showRelocationDetails,
 				boolean showPatchBytes,
 				Optional<Integer> optionalExpandOverlayIndex,
 				Optional<String> optionalExpandOverlayLength,
 				boolean ignoreTargetFileLength) {
 			this.optionalExePath = optionalExePath;
-			this.optionalPatchPath = optionalPatchPath;
+			this.patchPaths = patchPaths;
 			this.showRelocationDetails = showRelocationDetails;
 			this.showPatchBytes = showPatchBytes;
 			this.optionalExpandOverlayIndex = optionalExpandOverlayIndex;
@@ -141,36 +141,40 @@ public class UltimaPatcher {
 		Optional<Executable> optionalExecutable = options.optionalExePath
 				.map(rethrowIoException(p -> readExeFile(Paths.get(p))));
 
-		Optional<Patch> optionalPatch = options.optionalPatchPath
-				.map(rethrowIoException(p -> readPatchFile(Paths.get(p))));
+		List<Patch> patches = options.patchPaths.stream()
+				.map(rethrowIoException(p -> readPatchFile(Paths.get(p))))
+				.collect(Collectors.toList());
 
-		if (optionalExecutable.isPresent() && optionalPatch.isPresent()) {
+		if (optionalExecutable.isPresent() && !patches.isEmpty()) {
 			Executable executable = optionalExecutable.get();
 			executable.logSummary();
 
-			Patch patch = optionalPatch.get();
-			patch.logSummary();
+			for (Patch patch : patches) {
+				patch.logSummary();
 
-			if (patch.targetFileLength != executable.fileLength
-					&& !options.ignoreTargetFileLength) {
-				L.error(String.format(
-						"Patch target file length 0x%X differs from executable length 0x%X."
-						+ " Use --ignore_target_file_length to bypass this check.",
-						patch.targetFileLength,
-						executable.fileLength));
-				System.exit(0xDEADBEEF);
+				if (patch.targetFileLength != executable.fileLength
+						&& !options.ignoreTargetFileLength) {
+					L.error(String.format(
+							"Patch target file length 0x%X differs from executable length 0x%X."
+							+ " Use --ignore_target_file_length to bypass this check.",
+							patch.targetFileLength,
+							executable.fileLength));
+					System.exit(0xDEADBEEF);
+				}
 			}
 
-			Collection<OverwriteEdit> edits;
-			try {
-				edits = producePatchEdits(patch, executable, options.showPatchBytes);
-			} catch (PatchApplicationException e) {
-				L.error(e);
+			for (Patch patch : patches) {
+				Collection<OverwriteEdit> edits;
+				try {
+					edits = producePatchEdits(patch, executable, options.showPatchBytes);
+				} catch (PatchApplicationException e) {
+					L.error(e);
 
-				throw new RuntimeException("Cannot apply patch.", e);
+					throw new RuntimeException("Cannot apply patch.", e);
+				}
+
+				applyEdits(executable.path, edits);
 			}
-
-			applyEdits(executable.path, edits);
 		} else if (optionalExecutable.isPresent()) {
 			Executable executable = optionalExecutable.get();
 
@@ -196,8 +200,10 @@ public class UltimaPatcher {
 					executable.readAndLogRelocationSiteDetails();
 				}
 			}
-		} else if (optionalPatch.isPresent()) {
-			optionalPatch.get().logDetails();
+		} else if (!patches.isEmpty()) {
+			for (Patch patch : patches) {
+				patch.logDetails();
+			}
 		}
 	}
 
