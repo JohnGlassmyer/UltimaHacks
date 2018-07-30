@@ -63,11 +63,11 @@ The Java program _UltimaPatcher_ must be built by invoking Maven in the
 
 Applying the patches requires that the last overlay of the game's executable
 (U7.EXE) first be expanded to provide room for several new procedures (this
-increases the executable's size by several kilobytes). This is the first task
+increases the executable's size by a few kilobytes). This is the first task
 to be performed by the Java project built in the previous step (the jar should
 be found in the `target` directory):
 
-`java -jar UltimaPatcher.jar --exe=U7.EXE --expand_last_overlay`
+`java -jar UltimaPatcher.jar --exe=U7.EXE --expand_overlay_index=348 --expand_overlay_length=0x4000`
 
 NASM can then be invoked to assemble each .asm file in the `ultima7`
 directory to a .o file:
