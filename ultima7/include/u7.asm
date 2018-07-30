@@ -2,7 +2,7 @@
 ; (which I think the game's developers called a "ref")
 
 ; size of executable file to be patched
-EXPANDED_OVERLAY_U7_EXE_LENGTH          EQU 0xB771E
+EXPANDED_OVERLAY_U7_EXE_LENGTH          EQU 0xAB71E
 
 ; file offsets
 
