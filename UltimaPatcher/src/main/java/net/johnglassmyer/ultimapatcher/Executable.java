@@ -131,7 +131,7 @@ class Executable {
 
 	private void logPathAndFileLength() {
 		L.info(String.format("executable %s of length:", path));
-		L.info(new HexValueMessage((int) fileLength));
+		L.info(new HexValueMessage(fileLength));
 		L.info("");
 	}
 
@@ -258,8 +258,22 @@ class Executable {
 					"New relocation table length < old relocation table length.");
 		}
 
-		// TODO: don't move the start of the overlay if it is already the last thing in the file
-		L.info(String.format("Overlay will be moved to start at 0x%X", fileLength));
+		int lastOverlayStartInFile = segments.stream()
+				.flatMap(s -> s.optionalOverlay.stream())
+				.mapToInt(o -> o.getCodeStart())
+				.max()
+				.getAsInt();
+		boolean wasAlreadyLastOverlay = overlay.getCodeStart() == lastOverlayStartInFile;
+
+		// Don't move the overlay if it is already the last thing in the file.
+		int newOverlayCodeStart;
+		if (wasAlreadyLastOverlay) {
+			L.info("Overlay will remain at end of file");
+			newOverlayCodeStart = overlay.getCodeStart();
+		} else {
+			L.info(String.format("Overlay will be moved to end of file at 0x%X", fileLength));
+			newOverlayCodeStart = fileLength;
+		}
 
 		L.info("New procs (stub proc -> overlay proc):");
 		List<Integer> procStartsInOverlay = new ArrayList<>();
@@ -313,7 +327,7 @@ class Executable {
 			int editStartInFile = stub.startInFile + 4;
 			ByteBuffer buffer = bufferWrappingBytes(10);
 			int newOverlayStartFromFbovEnd =
-					fileLength - (mzHeader.calculateMzFileSize() + FbovHeader.LENGTH);
+					newOverlayCodeStart - (mzHeader.calculateMzFileSize() + FbovHeader.LENGTH);
 			buffer.putInt(newOverlayStartFromFbovEnd);
 			buffer.putShort((short) (newCodeLength));
 			buffer.putShort((short) (stub.relocationTableByteCount));
@@ -335,20 +349,32 @@ class Executable {
 		{
 			/**
 			 * new overlay edits:
-			 * - insert new code length + new relocation table length at end of file
-			 * - copy overlay code to end of file
+			 * - make room for code + relocation table at end of file
+			 * - copy overlay code to end of file (if it's not already there)
 			 * - copy overlay relocation table to end of file
 			 * - set bytes at proc starts to 0xCB (retf instruction)
 			 */
-			edits.add(new InsertEdit(fileLength, newOverlayLength));
-			edits.add(new CopyEdit(overlay.getCodeStart(), overlay.getCodeLength(), fileLength));
+			int additionalFileLength;
+			if (wasAlreadyLastOverlay) {
+				additionalFileLength = newOverlayLength -
+						(overlay.getCodeLength() + overlay.stub.relocationTableByteCount);
+			} else {
+				additionalFileLength = newOverlayLength;
+			}
+			edits.add(new InsertEdit(fileLength, additionalFileLength));
+
+			if (!wasAlreadyLastOverlay) {
+				edits.add(new CopyEdit(
+						overlay.getCodeStart(), overlay.getCodeLength(), newOverlayCodeStart));
+			}
+
 			edits.add(new CopyEdit(
 					overlay.getCodeStart() + overlay.getCodeLength(),
 					stub.relocationTableByteCount,
-					fileLength + newCodeLength));
+					newOverlayCodeStart + newCodeLength));
 
 			for (int procStartInOverlay : procStartsInOverlay) {
-				int procStartInFile = fileLength + procStartInOverlay;
+				int procStartInFile = newOverlayCodeStart + procStartInOverlay;
 				edits.add(new OverwriteEdit(procStartInFile, new byte[] {
 						(byte) 0xCB
 				}));
