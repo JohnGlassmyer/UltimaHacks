@@ -77,7 +77,7 @@ A number of **keys** have been added or changed:
 * g: activate compass
 * h: activate health and mana flasks
 * v: close container in inventory view
-* Ctrl+Alt+<letter>: select a rune for spellcasting
+* Ctrl+Alt+\<letter\>: select a rune for spellcasting
 * Ctrl+Alt+Space: cast the selected runes
 * Ctrl+Alt+Backspace: clear selected runes
 
