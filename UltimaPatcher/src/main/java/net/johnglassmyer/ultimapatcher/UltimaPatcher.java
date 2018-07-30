@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -163,18 +164,16 @@ public class UltimaPatcher {
 				}
 			}
 
-			for (Patch patch : patches) {
-				Collection<OverwriteEdit> edits;
-				try {
-					edits = producePatchEdits(patch, executable, options.showPatchBytes);
-				} catch (PatchApplicationException e) {
-					L.error(e);
+			Collection<OverwriteEdit> edits;
+			try {
+				edits = producePatchEdits(patches, executable, options.showPatchBytes);
+			} catch (PatchApplicationException e) {
+				L.error(e);
 
-					throw new RuntimeException("Cannot apply patch.", e);
-				}
-
-				applyEdits(executable.path, edits);
+				throw new RuntimeException("Cannot apply patch.", e);
 			}
+
+			applyEdits(executable.path, edits);
 		} else if (optionalExecutable.isPresent()) {
 			Executable executable = optionalExecutable.get();
 
@@ -220,13 +219,18 @@ public class UltimaPatcher {
 	}
 
 	static private Collection<OverwriteEdit> producePatchEdits(
-			Patch patch, Executable exe, boolean showPatchBytes)
+			List<Patch> patches, Executable exe, boolean showPatchBytes)
 					throws PatchApplicationException {
-		List<PatchBlock> sortedBlocks = new ArrayList<>(patch.blocks);
-		sortedBlocks.sort(comparingInt(b -> b.startInExe));
+		List<PatchBlock> allBlocks = patches.stream()
+				.flatMap(p -> p.blocks.stream())
+				.collect(Collectors.toList());
+
+		List<PatchBlock> blocksByStartInExe = allBlocks.stream()
+				.sorted(Comparator.comparing(b -> b.startInExe))
+				.collect(Collectors.toList());
 
 		PatchBlock lastBlock = null;
-		for (PatchBlock block : sortedBlocks) {
+		for (PatchBlock block : blocksByStartInExe) {
 			if (lastBlock != null) {
 				int lastBlockEnd = lastBlock.startInExe + lastBlock.codeBytes.length;
 				if (lastBlockEnd > block.startInExe) {
@@ -259,7 +263,7 @@ public class UltimaPatcher {
 
 		// <<multiple blocks could affect the mz relocation table>>
 		// <<multiple blocks could affect each overlay relocation table>>
-		for (PatchBlock block : patch.blocks) {
+		for (PatchBlock block : allBlocks) {
 			block.logSummary();
 
 			int blockStart = block.startInExe;
