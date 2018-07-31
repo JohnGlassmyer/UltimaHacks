@@ -102,23 +102,12 @@ dseg_drawQueueEnd_ps                    EQU 0x8720
 ; l_xxx if calling from the load module
 ; o_xxx if calling from an overlay
 
-%define l_redrawRegion                  0x0085:0x4AC1
-%define o_redrawRegion                  0x0018:0x4AC1
-
 %define l_signedWordToString            0x0E72:0x1D1B
 %define o_signedWordToString            0x0028:0x1D1B
 %define l_unsignedDwordToString         0x0E72:0x1D42
 %define o_unsignedDwordToString         0x0028:0x1D42
-%define l_memcpyFar                     0x0E72:0x1DF9
-%define o_memcpyFar                     0x0028:0x1DF9
 %define l_strcat                        0x0E72:0x27F3
 %define o_strcat                        0x0028:0x27F3
-%define l_strchr                        0x0E72:0x282C
-%define o_strchr                        0x0028:0x282C
-%define l_strlen                        0x0E72:0x28B5
-%define o_strlen                        0x0028:0x28B5
-%define l_allocateFarMemory             0x0E72:0x3344
-%define o_allocateFarMemory             0x0028:0x3344
 
 %define l_bindMouse                     0x1AB4:0x0082
 %define o_bindMouse                     0x0058:0x0082
@@ -136,15 +125,11 @@ dseg_drawQueueEnd_ps                    EQU 0x8720
 %define o_setCursorImage                0x0080:0x0745
 %define l_updateCursorRegion            0x1B8F:0x07AB
 %define o_updateCursorRegion            0x0080:0x07AB
-%define l_handleCursorInput             0x1B8F:0x0B30
-%define o_handleCursorInput             0x0080:0x0B30
 %define l_savePixelsAroundCursor        0x1B8F:0x0B70
 %define o_savePixelsAroundCursor        0x0080:0x0B70
 %define l_drawCursor                    0x1B8F:0x0C70
 %define o_drawCursor                    0x0080:0x0C70
 
-%define l_loadXmiSequence               0x1C86:0x174B
-%define o_loadXmiSequence               0x0088:0x174B
 %define l_playSoundEffect               0x1C86:0x1DB2
 %define o_playSoundEffect               0x0088:0x1DB2
 
@@ -208,16 +193,8 @@ dseg_drawQueueEnd_ps                    EQU 0x8720
 %define l_ark_say                       0x6469:0x003E
 %define o_ark_say                       0x0338:0x003E
 
-%define l_exitWithErrorString           0x64D4:0x002A
-%define o_exitWithErrorString           0x0390:0x002A
-
-%define l_tryToThrowCursorItem          0x64F7:0x0039
-%define o_tryToThrowCursorItem          0x03C8:0x0039
 %define l_closeInventoryContainer       0x64F7:0x002F
 %define o_closeInventoryContainer       0x03C8:0x002F
-
-%define l_doSpiralingView               0x656A:0x003E
-%define o_doSpiralingView               0x0478:0x003E
 
 %define l_trainSkill                    0x6599:0x0057
 %define o_trainSkill                    0x04D0:0x0057
