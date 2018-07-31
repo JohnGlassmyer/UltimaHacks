@@ -19,8 +19,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push di
 		
 		; calling slidePanel twice makes the panel slide twice as fast
-			callWithRelocation 0x0138:0x136B
-			callWithRelocation 0x0138:0x136B
+			callWithRelocation o_slidePanel
+			callWithRelocation o_slidePanel
 			
 		pop di
 		pop si

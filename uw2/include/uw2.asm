@@ -170,6 +170,8 @@ dseg_drawQueueEnd_ps                    EQU 0x8720
 
 %define l_setPanelState                 0x30D3:0x02C8
 %define o_setPanelState                 0x0138:0x02C8
+%define l_slidePanel                    0x30D3:0x136B
+%define o_slidePanel                    0x0138:0x136B
 
 %define l_getExternalizedString         0x3265:0x008E
 %define o_getExternalizedString         0x0148:0x008E
