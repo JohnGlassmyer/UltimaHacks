@@ -4,11 +4,6 @@
 
 [bits 16]
 
-%define l_tryToCast         0x6504:0x0020
-%define o_tryToCast         0x03D8:0x0020
-%define l_clickRunePanel    0x6504:0x0034
-%define o_clickRunePanel    0x03D8:0x0034
-
 startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		expanded overlay procedure: runeKey
 		

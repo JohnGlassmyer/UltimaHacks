@@ -196,6 +196,14 @@ dseg_drawQueueEnd_ps                    EQU 0x8720
 %define l_closeInventoryContainer       0x64F7:0x002F
 %define o_closeInventoryContainer       0x03C8:0x002F
 
+%define l_tryToCast                     0x6504:0x0020
+%define o_tryToCast                     0x03D8:0x0020
+%define l_clickRunePanel                0x6504:0x0034
+%define o_clickRunePanel                0x03D8:0x0034
+
+%define l_clickFlasks                   0x654A:0x002A
+%define o_clickFlasks                   0x0448:0x002A
+
 %define l_trainSkill                    0x6599:0x0057
 %define o_trainSkill                    0x04D0:0x0057
 

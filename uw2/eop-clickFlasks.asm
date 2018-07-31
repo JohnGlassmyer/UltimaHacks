@@ -18,8 +18,6 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push si
 		push di
 		
-		%define o_clickFlasks 0x0448:0x002A
-		
 		mov si, [dseg_inputState_pn]
 		
 		mov word [si+InputState_relativeX], 20
