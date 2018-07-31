@@ -121,12 +121,12 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		simulateClickOnRunePanel:
 			mov word [si+InputState_mouseButton], 1
 			
-			push word [0x2506]
-			mov word [0x2506], 0
+			push word [dseg_cursorMode]
+			mov word [dseg_cursorMode], 0
 			
 			callWithRelocation o_clickRunePanel
 			
-			pop word [0x2506]
+			pop word [dseg_cursorMode]
 			
 			mov word [si+InputState_mouseButton], 0
 			
