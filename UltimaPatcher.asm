@@ -83,3 +83,23 @@
     push strict word %1
     %assign relocationCount relocationCount + 1
 %endmacro
+
+; defineProc segmentFromOverlay, segmentFromLoadModule, offset, procName
+%macro defineProc 4
+	procSegmentFromOverlay_%[%4] EQU %1
+	procSegmentFromLoadModule_%[%4] EQU %2
+	procOffset_%[%4] EQU %3
+	
+	%define l_%[%4] %2:%3
+	%define o_%[%4] %1:%3
+%endmacro
+
+; callFromOverlay procName
+%macro callFromOverlay 1
+	callWithRelocation procSegmentFromOverlay_%[%1]:procOffset_%[%1]
+%endmacro
+
+; callFromLoadModule procName
+%macro callFromLoadModule 1
+	callWithRelocation procSegmentFromLoadModule_%[%1]:procOffset_%[%1]
+%endmacro
