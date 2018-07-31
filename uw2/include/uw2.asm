@@ -75,6 +75,9 @@ dseg_currentCursorAreaMaxX              EQU 0x23D4
 dseg_currentCursorAreaMaxY              EQU 0x23D6
 dseg_itemAtCursor_ps                    EQU 0x24FC
 dseg_cursorMode                         EQU 0x2506
+dseg_gridViewFlags                      EQU 0x26EE
+dseg_leftViewLimit                      EQU 0x2B5E
+dseg_rightViewLimit                     EQU 0x2B6F
 dseg_drawQueuing_currentColumn          EQU 0x2C6A
 dseg_drawQueuing_currentRow             EQU 0x2C6C
 dseg_pitch                              EQU 0x33D6
@@ -92,14 +95,6 @@ dseg_3dViewLeftX                        EQU 0x829E
 dseg_3dViewBottomY                      EQU 0x8626
 dseg_3dViewWidth                        EQU 0x862C
 dseg_drawQueueEnd_ps                    EQU 0x8720
-
-; TODO decide whether to keep, and sort into list above
-    dseg_gridViewFlags                  EQU 0x26EE
-    dseg_reducedHeading                 EQU 0x2B52
-    dseg_perspectiveTerrainGrid_ps      EQU 0x2B58
-    dseg_leftViewLimit                  EQU 0x2B5E
-    dseg_rightViewLimit                 EQU 0x2B6F
-    dseg_gridRowBeingDrawn              EQU 0x2C6C
 
 ; =============================================================================
 ; procedure far-call addresses
