@@ -66,7 +66,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				jnz afterSettingToCrosshairs
 				
 			; set cursor to crosshairs
-				push dseg_cursorNumbersArray + 0
+				push 0x106C
 				callWithRelocation o_setCursorImage
 				add sp, 2
 				

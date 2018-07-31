@@ -61,7 +61,6 @@ dseg_forwardThrottle                    EQU 0x077C
 dseg_rotationThrottle                   EQU 0x077E
 dseg_movementScancodesArray             EQU 0x0784
 dseg_activePanelNumber                  EQU 0x079E
-dseg_cursorNumbersArray                 EQU 0x106C
 dseg_shiftStates_ps                     EQU 0x2128
 dseg_keyStates_ps                       EQU 0x2138
 dseg_time_ps                            EQU 0x2158
