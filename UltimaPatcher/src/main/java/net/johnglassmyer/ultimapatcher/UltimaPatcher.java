@@ -442,8 +442,8 @@ public class UltimaPatcher {
 		List<Integer> relocationAddresses = new ArrayList<>();
 		int relocationCount = relocationTableBytes.length / 4;
 		for (int i = 0; i < relocationCount; i++) {
-			short offset = buffer.getShort();
-			short segment = buffer.getShort();
+			int offset = Short.toUnsignedInt(buffer.getShort());
+			int segment = Short.toUnsignedInt(buffer.getShort());
 			relocationAddresses.add(segment * Util.PARAGRAPH_SIZE + offset);
 		}
 
