@@ -42,18 +42,24 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			; save cursor coordinates and place cursor in middle of screen
 				mov ax, [dseg_cursorX]
 				mov word [dseg_cursorXDuringMouseLook], ax
-				mov word [dseg_cursorX], 120
+				mov ax, [dseg_3dViewWidth]
+				shr ax, 1
+				add ax, [dseg_3dViewLeftX]
+				mov [dseg_cursorX], ax
 				
-				movzx ax, byte [dseg_cursorY]
+				movzx ax, [dseg_cursorY]
 				mov word [dseg_cursorYDuringMouseLook], ax
-				mov byte [dseg_cursorY], 120
+				mov ax, [dseg_3dViewHeight]
+				shr ax, 1
+				add ax, [dseg_3dViewBottomY]
+				mov [dseg_cursorY], ax
 				
 			; forge a point cursor-area to protect the cursor image
 				mov ax, [dseg_cursorX]
 				mov [dseg_currentCursorAreaMinX], ax
 				mov [dseg_currentCursorAreaMaxX], ax
 				
-				movzx ax, [dseg_cursorY]
+				mov ax, [dseg_cursorY]
 				mov [dseg_currentCursorAreaMinY], ax
 				mov [dseg_currentCursorAreaMaxY], ax
 				
@@ -88,7 +94,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				mov ax, [dseg_cursorXDuringMouseLook]
 				mov [dseg_cursorX], ax
 				mov ax, [dseg_cursorYDuringMouseLook]
-				mov byte [dseg_cursorY], al
+				mov [dseg_cursorY], ax
 				
 			; saving the background pixels at the restored cursor location
 			; before updateCursorRegion redraws them
