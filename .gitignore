@@ -1,0 +1,5 @@
+*.o
+*.lst
+*.sh
+ultimaPatcher.log
+
