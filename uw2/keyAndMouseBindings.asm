@@ -42,8 +42,6 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			cmp si, 'z'
 			jle forRuneCharacter
 			
-		; call eop-attack, which remembers the chosen attack type and then
-		;   delegates to the original attack proc
 		bindKey 1, ' ', byteArgEopDispatcher, byteArgEopArg(attack, 0) ; auto-attack
 		bindKey 1, '.', byteArgEopDispatcher, byteArgEopArg(attack, 3) ; thrust
 		bindKey 1, ';', byteArgEopDispatcher, byteArgEopArg(attack, 6) ; slash
@@ -56,15 +54,14 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		bindKey 1, 'q', byteArgEopDispatcher, byteArgEopArg(interactAtCursor, 1) ; look
 		bindKey 1, 'e', byteArgEopDispatcher, byteArgEopArg(interactAtCursor, 0) ; use
 		
-		; display map
-		bindKey 1, 'c', transitionToInterfaceMode, InterfaceMode_MAP
+		bindKey 1, 'z', transitionToInterfaceMode, InterfaceMode_MAP
 		
-		bindKey 1, 'v', closeInventoryContainer, 0
+		bindKey 1, 'c', closeInventoryContainer, 0
+		bindKey 1, 'v', scrollInventoryDown, 0
+		bindKey 1, 'b', scrollInventoryUp, 0
 		
-		; simulate click on compass
 		bindKey 1, 'g', clickCompass, 0
 		
-		; simulate clicks on health and mana flasks
 		bindKey 1, 'h', byteArgEopDispatcher, byteArgEopArg(clickFlasks, 0)
 		
 		; click areas adjacent to compass to turn (broken in original game)
@@ -102,7 +99,6 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		bindKey 1, 0x83, setInteractionMode, 4 ; F4
 		bindKey 1, 0x85, setInteractionMode, 5 ; F6
 		
-		; in conversation
 		bindKey   4, '1', selectConversationOption, 1
 		bindKey   4, '2', selectConversationOption, 2
 		bindKey   4, '3', selectConversationOption, 3
@@ -112,7 +108,6 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		bindMouse 4, 119, 135, 163, 188, clickAvatarTrade, 4
 		bindMouse 4,  16,   1, 223,  30, selectConversationOption, 0
 		
-		; on map screen
 		%define mapControlEopArg(number) \
 				byteArgEopArg(mapControl, MapControl_ %+ number)
 		bindKey 2, 's', byteArgEopDispatcher, mapControlEopArg(LEVEL_UP)
@@ -121,8 +116,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		bindKey 2, 'a', byteArgEopDispatcher, mapControlEopArg(REALM_DOWN)
 		bindKey 2, 'c', byteArgEopDispatcher, mapControlEopArg(AVATAR_LEVEL)
 		
-		bindKey 27, A|'h',  toggleBool,   dseg_mouseHand
-		bindKey 27, A|0x86, printVersion, 0; Alt+F7
-		bindKey 27, A|0x87, printDebug,   0; Alt+F8
+		bindKey 27, A|'h',  toggleBool,   dseg_mouseHand ; Alt+h
+		bindKey 27, A|0x86, printVersion, 0              ; Alt+F7
+		bindKey 27, A|0x87, printDebug,   0              ; Alt+F8
 	endBlockWithFillAt nop, 0x97FEF
 endPatch
