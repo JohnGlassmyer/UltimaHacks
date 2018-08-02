@@ -1,5 +1,5 @@
 ; =============================================================================
-; Ultima Underworld II Hacks -- additional character mappings
+; Ultima Underworld Hacks -- additional character mappings
 ; -----------------------------------------------------------------------------
 
 ; mapScancodeToCharacter scancode, character

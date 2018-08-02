@@ -1,5 +1,5 @@
 ; =============================================================================
-; Ultima Underworld II Hacks -- expanded overlay
+; Ultima Underworld Hacks -- expanded overlay
 ; -----------------------------------------------------------------------------
 
 ; assuming that the expanded overlay has been moved to the end of the file
