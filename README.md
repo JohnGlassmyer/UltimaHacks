@@ -16,16 +16,21 @@ The Java project, UltimaPatcher, requires Java 1.9 or higher to compile and uses
 the Apache Maven build system.
 
 ## Ultima VII: The Black Gate
-Changes focus on improving usability - allowing the player to do things more easily or more directly - and on adding keyboard control to what was a largely mouse-driven game.
+Changes focus on improving usability - allowing the player to do things
+more easily or more directly - and on adding keyboard control to what was
+a largely mouse-driven game.
 
 For one thing, **dialogs** have been made more controllable:
 * most dialogs can be closed by right clicking
 * the Save dialog allows selecting save slots with number or arrow keys
 * quantity slider controls can be adjusted with arrow keys, Shift, and Enter.
 
-To facilitate inventory management, **bags and backpacks** are now treated as flexible, meaning that they can be placed inside of each other, depending on the bulk of their contents.
+To facilitate inventory management, **bags and backpacks** are now treated as
+flexible, meaning that they can be placed inside of each other, depending on
+the bulk of their contents.
 
-Beyond that, a number of **key commands** have been added. For interacting with items:
+Beyond that, a number of **key commands** have been added. For interacting
+with items:
 
                 k: find and use the key for a door or chest
                        (emulates the keyring of Serpent Isle)
@@ -39,7 +44,8 @@ Beyond that, a number of **key commands** have been added. For interacting with 
                 x: use sextant
                 g: count party gold
 
-**Party members** can be selected, in many contexts, with corresponding number keys:
+**Party members** can be selected, in many contexts, with corresponding
+number keys:
 
                 N: open or target Nth party member
           Shift+N: open or target Nth party member's backpack
@@ -50,7 +56,7 @@ These keys can be combined:
 
                t, 2: talk to the 2nd party member
                f, 3: feed the 3rd party member
-    <cast spell>, 4: target the 4th party with a spell
+    <cast spell>, 4: target the 4th party member with a spell
 
 **Spells** can be selected and cast by typing their runes in real-time:
 
@@ -77,12 +83,14 @@ of vertical view angle has been greatly expanded, and the 3D rendering engine ha
 hacked to have it draw the bits of the world that become visible when the player looks
 sharply upward or downward.
 
-Also, spell runes can be typed directly (with `Ctrl+Alt+<letter>`), without having to navigate through the inventory and the rune bag.
+Also, spell runes can be typed directly (with `Ctrl+Alt+<letter>`), without having to
+navigate through the inventory and the rune bag.
 
 Things made more convenient:
 * The opening title-screen or cinematic is skipped.
 * The player's heading is not adjusted when moving against a wall.
-* Skill points gained in training are immediately reported in the message log (currently only in Ultima Underworld II).
+* Skill points gained in training are immediately reported in the message log
+(currently only in Ultima Underworld II).
 
 A number of **keys** have been added or changed. The most important:
 
@@ -121,10 +129,10 @@ Keys for navigating the **map**:
                 a: next realm (Ultima Underworld II only)
                 c: go to Avatar's level
 
-
 ## How to Apply The Patches
 
-These patches are intended to be applied to particular versions of the games, all as distributed by GOG.com:
+These patches are intended to be applied to particular versions of the games,
+all as distributed by GOG.com:
 * Ultima VII 3.4
 * Ultima Underworld vF1.94S
 * Ultima Underworld II vF1.99S
@@ -135,7 +143,8 @@ NASM, a Java 1.9 or higher JDK, and Apache Maven should be installed and on the
 system path before attepting to build the code and apply the patches. Git for
 Windows supplies a Bash shell capable of processing the listed commands.
 
-The patch sources can be assembled to `.o` binaries by invoking NASM in the `ultima7`, `uw1`, or `uw2` directory:
+The patch sources can be assembled to `.o` binaries by invoking NASM in the
+`ultima7`, `uw1`, or `uw2` directory:
 
 `for a in *.asm ; do nasm $a -o ${a/.asm/.o} ; done`
 
@@ -155,7 +164,6 @@ step (`UltimaPatcher.jar` should be found in the `target` directory):
 `java -jar UltimaPatcher.jar --exe=UW.EXE --expand_overlay_index=117 --expand_overlay_length=0x2400`
 
 `java -jar UltimaPatcher.jar --exe=UW2.EXE --expand_overlay_index=93 --expand_overlay_length=0x2800`
-
 
 Finally, _UltimaPatcher_ must be invoked again to apply the .o patches to each
 executable. For example:
