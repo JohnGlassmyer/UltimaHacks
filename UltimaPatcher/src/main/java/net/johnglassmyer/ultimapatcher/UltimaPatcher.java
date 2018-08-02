@@ -49,23 +49,17 @@ public class UltimaPatcher {
 					optionParser.accepts("exe")
 							.withRequiredArg();
 
-			OptionSpec<Void> showRelocationDetailsOption =
-					optionParser.accepts("show_relocation_details")
+			OptionSpec<Void> listRelocationsOption =
+					optionParser.accepts("list_relocations")
 							.availableIf(exeOption);
 
-			OptionSpec<String> patchOption =
-					optionParser.accepts("patch")
-							.requiredUnless(exeOption)
-							.withRequiredArg();
-
-			OptionSpec<Void> showPatchBytesOption =
-					optionParser.accepts("show_patch_bytes")
-							.availableIf(patchOption);
+			OptionSpec<Void> showOverlayProcsOption =
+					optionParser.accepts("show_overlay_procs")
+							.availableIf(exeOption);
 
 			OptionSpec<Integer> expandOverlayIndexOption =
 					optionParser.accepts("expand_overlay_index")
 							.availableIf(exeOption)
-							.availableUnless(patchOption)
 							.withRequiredArg()
 							.ofType(Integer.class);
 
@@ -75,6 +69,16 @@ public class UltimaPatcher {
 							.requiredIf(expandOverlayIndexOption)
 							.withRequiredArg();
 
+			OptionSpec<String> patchOption =
+					optionParser.accepts("patch")
+							.requiredUnless(exeOption)
+							.availableUnless(expandOverlayIndexOption)
+							.withRequiredArg();
+
+			OptionSpec<Void> showPatchBytesOption =
+					optionParser.accepts("show_patch_bytes")
+							.availableIf(patchOption);
+
 			OptionSpec<Void> ignoreTargetFileLengthOption =
 					optionParser.accepts("ignore_target_file_length")
 							.availableIf(exeOption, patchOption);
@@ -83,11 +87,12 @@ public class UltimaPatcher {
 
 			return new Options(
 					getOptionally(optionSet, exeOption),
-					optionSet.valuesOf(patchOption),
-					optionSet.has(showRelocationDetailsOption),
-					optionSet.has(showPatchBytesOption),
+					optionSet.has(listRelocationsOption),
+					optionSet.has(showOverlayProcsOption),
 					getOptionally(optionSet, expandOverlayIndexOption),
 					getOptionally(optionSet, expandOverlayLengthOption),
+					optionSet.valuesOf(patchOption),
+					optionSet.has(showPatchBytesOption),
 					optionSet.has(ignoreTargetFileLengthOption));
 		}
 
@@ -100,27 +105,30 @@ public class UltimaPatcher {
 		}
 
 		final Optional<String> optionalExePath;
-		final List<String> patchPaths;
-		final boolean showRelocationDetails;
-		final boolean showPatchBytes;
+		final boolean listRelocations;
+		final boolean showOverlayProcs;
 		final Optional<Integer> optionalExpandOverlayIndex;
 		final Optional<String> optionalExpandOverlayLength;
+		final List<String> patchPaths;
+		final boolean showPatchBytes;
 		final boolean ignoreTargetFileLength;
 
 		Options(
 				Optional<String> optionalExePath,
-				List<String> patchPaths,
-				boolean showRelocationDetails,
-				boolean showPatchBytes,
+				boolean listRelocations,
+				boolean showOverlayProcs,
 				Optional<Integer> optionalExpandOverlayIndex,
 				Optional<String> optionalExpandOverlayLength,
+				List<String> patchPaths,
+				boolean showPatchBytes,
 				boolean ignoreTargetFileLength) {
 			this.optionalExePath = optionalExePath;
-			this.patchPaths = patchPaths;
-			this.showRelocationDetails = showRelocationDetails;
-			this.showPatchBytes = showPatchBytes;
+			this.listRelocations = listRelocations;
+			this.showOverlayProcs = showOverlayProcs;
 			this.optionalExpandOverlayIndex = optionalExpandOverlayIndex;
 			this.optionalExpandOverlayLength = optionalExpandOverlayLength;
+			this.patchPaths = patchPaths;
+			this.showPatchBytes = showPatchBytes;
 			this.ignoreTargetFileLength = ignoreTargetFileLength;
 		}
 	}
@@ -150,6 +158,7 @@ public class UltimaPatcher {
 			Executable executable = optionalExecutable.get();
 			executable.logSummary();
 
+			L.info(patches.size() + " patches:");
 			for (Patch patch : patches) {
 				patch.logSummary();
 
@@ -193,11 +202,10 @@ public class UltimaPatcher {
 				}
 
 				applyEdits(executable.path, edits);
+			} else if (options.listRelocations) {
+				executable.listRelocations();
 			} else {
-				executable.logDetails();
-				if (options.showRelocationDetails) {
-					executable.readAndLogRelocationSiteDetails();
-				}
+				executable.logDetails(options.showOverlayProcs);
 			}
 		} else if (!patches.isEmpty()) {
 			for (Patch patch : patches) {
@@ -208,12 +216,13 @@ public class UltimaPatcher {
 
 	static private void logUsage() {
 		L.info("For executable info:");
-		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> [--show_relocation_details]");
+		L.info("  java -jar UltimaPatcher.jar"
+				+ " --exe=<exeFile> [--list_relocations | --show_overlay_procs]");
 		L.info("For patch info:");
 		L.info("  java -jar UltimaPatcher.jar --patch=<patchFile> [--show_patch_bytes]");
 		L.info("To move an overlay to the end of the file and lengthen it:");
 		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> "
-				+ "--expand_overlay_index=<segmentIndex> --expand_overlay_length=<newLength>");
+				+ " --expand_overlay_index=<segmentIndex> --expand_overlay_length=<newLength>");
 		L.info("To apply patch to executable:");
 		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> --patch=<patchFile>");
 	}
@@ -291,8 +300,6 @@ public class UltimaPatcher {
 					blockStart, blockEnd, newRelocationFileOffsets);
 
 			edits.add(new OverwriteEdit(blockStart, block.codeBytes));
-
-			L.info("");
 		}
 
 		for (RelocationTableEditor relocationTableEditor : relocationTableEditors.values()) {

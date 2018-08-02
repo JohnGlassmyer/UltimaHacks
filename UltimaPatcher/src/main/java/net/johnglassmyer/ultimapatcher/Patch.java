@@ -34,6 +34,5 @@ class Patch {
 
 	private void logDescription() {
 		L.info(String.format("patch \"%s\" with %d block(s)", description, blocks.size()));
-		L.info("");
 	}
 }

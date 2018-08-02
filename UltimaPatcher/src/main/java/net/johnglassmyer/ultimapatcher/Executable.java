@@ -1,24 +1,19 @@
 package net.johnglassmyer.ultimapatcher;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static java.util.stream.IntStream.range;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.SortedSet;
-import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.LongAdder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,8 +45,9 @@ class Executable {
 		logPathAndFileLength();
 	}
 
-	void logDetails() {
+	void logDetails(boolean showOverlayProcs) {
 		logPathAndFileLength();
+		L.info("");
 
 		mzHeader.logDetails();
 		L.info("");
@@ -60,59 +56,89 @@ class Executable {
 		L.info("");
 
 		L.info(String.format("%d segments: (flags: C=code, O=overlay, D=data)", segments.size()));
-		L.info("index | base | stof | start  | flags | sp (p) | ovcods | ovcodl | rtabst | rt f/ cap");
-		L.info("------+------+------+--------+-------+--------+--------+--------+--------+----------");
+		L.info("index |  *8  | base:offsets   | start  | flags | sp (p) | ovcods | ovcodl | ovrels | rt f/ cap");
+		L.info("------+------+----------------+--------+-------+--------+--------+--------+--------+----------");
+
+		if (showOverlayProcs) {
+			L.info(" proc   stub   code                                       in exe");
+			L.info("-------------------------------------------------------------------");
+		}
+
+		boolean lastWasOverlay = true;
 		for (int iSegment = 0; iSegment < segments.size(); iSegment++) {
 			Segment segment = segments.get(iSegment);
 
-			int startInTable = iSegment * SegmentInfo.LENGTH;
+			int segmentStartInTable = iSegment * SegmentInfo.LENGTH;
 			String codeIndicator = segment.info.isCode() ? "C" : "-";
 			String overlayIndicator = segment.info.isOverlay() ? "O" : "-";
 			String dataIndicator = segment.info.isData() ? "D" : "-";
 			int startInFile = calculateSegmentStartInFile(segment);
 			String textWithoutOverlayInfo = String.format(
-					" %4d | %04X | %04X | %06X |  %s%s%s ",
+					" %4d | %04X | %04X:%04X-%04X | %06X |  %s%s%s  |",
 					iSegment,
+					segmentStartInTable,
 					segment.info.segmentBase,
-					startInTable,
+					segment.info.startOffset,
+					segment.info.endOffset,
 					startInFile,
 					codeIndicator,
 					overlayIndicator,
 					dataIndicator);
 
 			if (segment.optionalOverlay.isPresent()) {
+				if (!lastWasOverlay && showOverlayProcs) {
+					L.info("------+------+----------------+--------+-------+--------+--------+--------+--------+----------");
+				}
+
 				Overlay overlay = segment.optionalOverlay.get();
 				RelocationTableEditor tableEditor = overlay.createRelocationTableEditor();
 				SortedSet<Integer> relocationSitesInFile = tableEditor.getOriginalRelocationSitesInFile();
 				int overlayRelocationCount = relocationSitesInFile.size();
 				int spareBytes = calculateSpareBytesAfterSegment(segment);
 				int procSpace = spareBytes < 0 ? 0 : spareBytes / StubProc.LENGTH;
-				String overlayInfoText = String.format(
-						" | %2d (%1d) | %06X | %06X | %06X | %4d/%4d ",
+
+				L.info(String.format(
+						"%s %2d (%1d) | %06X | %06X | %06X | %4d/%4d ",
+						textWithoutOverlayInfo,
 						spareBytes,
 						procSpace,
 						overlay.getCodeStart(),
 						overlay.getCodeLength(),
 						tableEditor.getTableStartInFile(),
 						tableEditor.getCapacity() - overlayRelocationCount,
-						tableEditor.getCapacity());
-				L.info(textWithoutOverlayInfo + overlayInfoText);
+						tableEditor.getCapacity()));
 
-				// TODO: finish proc logging and add a command-line option to enable it
-				if (false) {
-					for (StubProc proc : overlay.stub.procs) {
-						L.info(String.format("    %04X", proc.startInOverlay));
+				if (showOverlayProcs) {
+					L.info("------+------+----------------+--------+-------+--------+--------+--------+--------+----------");
+
+					List<StubProc> procs = overlay.stub.procs;
+					range(0, procs.size()).forEach(iProc -> {
+						L.info(String.format(
+								" %4d   %04X   %04X                                       %06X",
+								iProc,
+								OverlayStub.HEADER_LENGTH + iProc * StubProc.LENGTH,
+								procs.get(iProc).startInOverlay,
+								overlay.getCodeStart() + procs.get(iProc).startInOverlay));
+					});
+					// TODO: print "...." for each spare proc space in stub?
+					if (!procs.isEmpty()) {
+						L.info("------+------+----------------+--------+-------+--------+--------+--------+--------+----------");
 					}
 				}
+
+				lastWasOverlay = true;
 			} else {
 				L.info(textWithoutOverlayInfo);
+
+				lastWasOverlay = false;
 			}
 		}
 	}
 
 	private int calculateSegmentStartInFile(Segment segment) {
 		return mzHeader.calculcateLoadModuleStartInFile()
-				+ segment.info.segmentBase * Util.PARAGRAPH_SIZE;
+				+ segment.info.segmentBase * Util.PARAGRAPH_SIZE
+				+ segment.info.startOffset;
 	}
 
 	private int calculateSpareBytesAfterSegment(Segment segment) {
@@ -130,69 +156,23 @@ class Executable {
 	}
 
 	private void logPathAndFileLength() {
-		L.info(String.format("executable %s of length:", path));
-		L.info(new HexValueMessage(fileLength));
-		L.info("");
+		L.info(new HexValueMessage(fileLength, String.format("executable length (%s)", path)));
 	}
 
-	void readAndLogRelocationSiteDetails() throws IOException {
-		RandomAccessFile exeFile = new RandomAccessFile(path.toFile(), "r");
-
-		SortedMap<Integer, Optional<PrecedingInstruction>> relocations = new TreeMap<>();
-		for (int fileOffset : collectRelocationFileOffsets()) {
-			relocations.put(fileOffset, parsePrecedingInstruction(exeFile, fileOffset));
+	void listRelocations() throws IOException {
+		for (int relocation : loadModule.createRelocationTableEditor().getOriginalRelocationSitesInFile()) {
+			L.info(String.format("0x%06X (0x%06X in load module)", relocation, relocation - loadModule.getCodeStart()));
 		}
 
-		List<Integer> relocationsWithoutInstructions = new ArrayList<>();
-		Map<PrecedingInstruction, LongAdder> countForPrecedingInstruction = new HashMap<>();
-		for (Map.Entry<Integer, Optional<PrecedingInstruction>> entry : relocations.entrySet()) {
-			Optional<PrecedingInstruction> maybePreceding = entry.getValue();
-			if (maybePreceding.isPresent()) {
-				PrecedingInstruction instruction = maybePreceding.get();
-				countForPrecedingInstruction.computeIfAbsent(
-						instruction, k -> new LongAdder()).increment();
-			} else {
-				relocationsWithoutInstructions.add(entry.getKey());
+		for (int i = 0; i < segments.size(); i++) {
+			Segment segment = segments.get(i);
+			if (segment.optionalOverlay.isPresent()) {
+				Overlay overlay = segment.optionalOverlay.get();
+				for (int relocation : overlay.createRelocationTableEditor().getOriginalRelocationSitesInFile()) {
+					L.info(String.format("0x%06X (0x%06X in overlay %d)", relocation, relocation - overlay.getCodeStart(), i));
+				}
 			}
 		}
-
-		L.info("opcodes preceding relocation offsets:");
-		for (Map.Entry<PrecedingInstruction, LongAdder> entry : countForPrecedingInstruction.entrySet()) {
-			LongAdder adder = entry.getValue();
-			PrecedingInstruction precedingInstruction = entry.getKey();
-			L.info(String.format("%10d %s", adder.longValue(), precedingInstruction));
-			if (!relocationsWithoutInstructions.isEmpty()) {
-				L.info(String.format("%10d <no recognized preceding instruction>",
-						relocationsWithoutInstructions.size()));
-			}
-		}
-		L.info("");
-
-		if (!relocationsWithoutInstructions.isEmpty()) {
-			L.info("relocation file offsets with no recognized preceding instructions:");
-			for (int offset : relocationsWithoutInstructions) {
-				L.info(new HexValueMessage(offset));
-			}
-		}
-		L.info("");
-	}
-
-	private Optional<PrecedingInstruction> parsePrecedingInstruction(
-			RandomAccessFile file, int fileOffset) throws IOException {
-		int precedingBytesToConsider = 4;
-		byte[] precedingBytes = Util.readBytes(
-				file, fileOffset - precedingBytesToConsider, precedingBytesToConsider);
-
-		// TODO: use IntStream.range(...) and return the Optional more succinctly
-		for (int i = 1; i <= precedingBytes.length; i++) {
-			int precedingByte = Byte.toUnsignedInt(precedingBytes[precedingBytes.length - i]);
-			Optional<PrecedingInstruction> optionalPreceding = PrecedingInstruction.forPrecedingByte(i, precedingByte);
-			if (optionalPreceding.isPresent()) {
-				return optionalPreceding;
-			}
-		}
-
-		return Optional.empty();
 	}
 
 	Collection<Patchable> getPatchables() {
