@@ -223,10 +223,12 @@ class Executable {
 		L.info("Stub has room for {} additional procs.", addedProcCount);
 
 		/**
-		 * Ultima VII code seems to use around 1 relocation (2 bytes) per 50 code bytes.
+		 * Ultima VII code seemed to need around 2 bytes of relocation data per 50 code bytes.
+		 * However, my patches use somewhat more, perhaps because they tend to consist largely of
+		 * (far/relocated) calls to procedures from the original game.
 		 */
-		double codeFraction = 50 / (double) 52;
-		int newCodeLength = (int) (newOverlayLength * codeFraction);
+		double relocationFraction = (double) 2 / 40;
+		int newCodeLength = (int) (newOverlayLength * (1 - relocationFraction));
 		int newRelocationTableLength = newOverlayLength - newCodeLength;
 		L.info(String.format("New overlay code length is 0x%X", newCodeLength));
 		L.info(String.format("New relocation table length is 0x%X", newRelocationTableLength));
