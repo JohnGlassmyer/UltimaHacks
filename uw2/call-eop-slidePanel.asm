@@ -8,6 +8,6 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		call eop slidePanel to slide panel more rapidly
 		
 	startBlockAt 0x34360
-		callWithRelocation l_byCallSiteEopDispatcher
+		callFromLoadModule byCallSiteEopDispatcher
 	endBlockAt startAbsolute + 5
 endPatch

@@ -18,7 +18,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push si
 		push di
 		
-		callWithRelocation o_clearDrawQueue
+		callFromOverlay clearDrawQueue
 		
 		; draw terrain behind the player
 			; signal to other patches that the view is flipped
@@ -27,7 +27,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			; flip heading around to draw terrain behind the player
 				add word [dseg_heading], 0x8000
 				
-			callWithRelocation o_setupPerspective
+			callFromOverlay setupPerspective
 			
 			; flip intra-block coordinates (coord = 0x100 - coord)
 				les bx, [dseg_perspective_ps]
@@ -36,7 +36,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				neg word [es:bx+Perspective_y]
 				add word [es:bx+Perspective_y], 0xFF
 				
-			callWithRelocation o_setupViewLimits
+			callFromOverlay setupViewLimits
 			
 			; broaden view-clipping half-angle from 45 degrees to 90 degrees
 				mov bx, dseg_leftViewLimit
@@ -46,7 +46,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				mov word [bx+ViewLimit_headingSin], 0x7FFF
 				mov word [bx+ViewLimit_headingCos], 0
 				
-			callWithRelocation o_applyViewLimits
+			callFromOverlay applyViewLimits
 			
 			call cullRearwardBlocks
 			
@@ -59,7 +59,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				mov es, si
 				mov byte [es:0x0465], 0xCB ; <retf> instruction
 				
-			callWithRelocation o_enqueueDrawWithinLimits
+			callFromOverlay enqueueDrawWithinLimits
 			
 			; re-enable enqueueDrawItemsInBlock
 				mov es, si
@@ -71,8 +71,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			mov byte [dseg_isDrawingBehindPlayer], 0
 			
 		; draw terrain and items in front of the player
-			callWithRelocation o_setupPerspective
-			callWithRelocation o_setupViewLimits
+			callFromOverlay setupPerspective
+			callFromOverlay setupViewLimits
 			
 			; broaden view-clipping half-angle from ~45 degrees to ~90 degrees
 				mov bx, dseg_leftViewLimit
@@ -82,11 +82,11 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				mov word [bx+ViewLimit_headingSin], 0x7FFF
 				mov word [bx+ViewLimit_headingCos], 0
 				
-			callWithRelocation o_applyViewLimits
+			callFromOverlay applyViewLimits
 			
 			call cullForwardBlocks
 			
-			callWithRelocation o_enqueueDrawWithinLimits
+			callFromOverlay enqueueDrawWithinLimits
 			
 		pop di
 		pop si
@@ -204,7 +204,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				lea ax, [bp+var_leftCullAngleSin]
 				push ax
 				push word [bp+var_leftCullAngle]
-				callWithRelocation o_sinAndCosInterpolated
+				callFromOverlay sinAndCosInterpolated
 				add sp, 6
 				
 			; sin and cos: [-0x8000, 0x7FFF]
@@ -213,7 +213,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				lea ax, [bp+var_rightCullAngleSin]
 				push ax
 				push word [bp+var_rightCullAngle]
-				callWithRelocation o_sinAndCosInterpolated
+				callFromOverlay sinAndCosInterpolated
 				add sp, 6
 				
 			mov bx, dseg_gridViewFlags

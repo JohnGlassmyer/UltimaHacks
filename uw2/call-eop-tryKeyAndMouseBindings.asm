@@ -9,7 +9,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		
 	startBlockAt 0x1E04B
 		push varArgsEopArg(tryKeyAndMouseBindings, 0)
-		callWithRelocation l_varArgsEopDispatcher
+		callFromLoadModule varArgsEopDispatcher
 		add sp, 2
 	endBlockWithFillAt nop, 0x1E056
 endPatch

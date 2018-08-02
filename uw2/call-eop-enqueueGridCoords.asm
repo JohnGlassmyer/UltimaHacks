@@ -9,7 +9,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		
 	%macro callEopEnqueueGridCoordsAt 1
 		startBlockAt %1
-			callWithRelocation l_byCallSiteEopDispatcher
+			callFromLoadModule byCallSiteEopDispatcher
 		endBlockAt startAbsolute + 5
 	%endmacro
 	

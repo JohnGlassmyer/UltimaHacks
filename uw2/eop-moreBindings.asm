@@ -5,8 +5,6 @@
 
 [bits 16]
 
-%define bo_moveCursor   0x0080, 0x0DA7
-
 startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		expanded overlay procedure: moreBindings
 		
@@ -21,18 +19,18 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push si
 		push di
 		
-		bindKey bo_moveCursor,    7, H|0xA3, H|0xA3 ; Shift+Tab
-		bindKey bo_moveCursor,    7,      9,      9 ; Tab
-		bindKey bo_moveCursor,    7,   0x8C,   0x8C ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x8D,   0x8D ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x8E,   0x8E ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x8F,   0x8F ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x91,   0x91 ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x92,   0x92 ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x93,   0x93 ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x94,   0x94 ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x95,   0x95 ; (numeric keypad)
-		bindKey bo_moveCursor,    7,   0x96,   0x96 ; (numeric keypad)
+		bindKey 7, H|0xA3, moveCursor, H|0xA3 ; Shift+Tab
+		bindKey 7,      9, moveCursor,      9 ; Tab
+		bindKey 7,   0x8C, moveCursor,   0x8C ; (numeric keypad)
+		bindKey 7,   0x8D, moveCursor,   0x8D ; (numeric keypad)
+		bindKey 7,   0x8E, moveCursor,   0x8E ; (numeric keypad)
+		bindKey 7,   0x8F, moveCursor,   0x8F ; (numeric keypad)
+		bindKey 7,   0x91, moveCursor,   0x91 ; (numeric keypad)
+		bindKey 7,   0x92, moveCursor,   0x92 ; (numeric keypad)
+		bindKey 7,   0x93, moveCursor,   0x93 ; (numeric keypad)
+		bindKey 7,   0x94, moveCursor,   0x94 ; (numeric keypad)
+		bindKey 7,   0x95, moveCursor,   0x95 ; (numeric keypad)
+		bindKey 7,   0x96, moveCursor,   0x96 ; (numeric keypad)
 		
 		pop di
 		pop si

@@ -22,11 +22,11 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		
 		mov word [si+InputState_relativeX], 20
 		mov word [si+InputState_relativeY], 11
-		callWithRelocation o_clickFlasks
+		callFromOverlay clickFlasks
 		
 		mov word [si+InputState_relativeX], 60
 		mov word [si+InputState_relativeY], 11
-		callWithRelocation o_clickFlasks
+		callFromOverlay clickFlasks
 		
 		pop di
 		pop si

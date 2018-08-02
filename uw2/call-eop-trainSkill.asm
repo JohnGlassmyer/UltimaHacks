@@ -8,6 +8,6 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		call eop trainSkill to print results of skill-training
 		
 	startBlockAt 0x76EF7
-		callWithRelocation o_byCallSiteEopDispatcher
+		callFromOverlay byCallSiteEopDispatcher
 	endBlockAt startAbsolute + 5
 endPatch

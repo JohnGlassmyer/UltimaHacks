@@ -47,13 +47,13 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			push ss
 			lea ax, [bp+var_string]
 			push ax
-			callWithRelocation o_strcat_far
+			callFromOverlay strcat_far
 			add sp, 8
 			
 			push ss
 			lea ax, [bp+var_string]
 			push ax
-			callWithRelocation o_printStringToScroll
+			callFromOverlay printStringToScroll
 			add sp, 4
 			
 		endProc:

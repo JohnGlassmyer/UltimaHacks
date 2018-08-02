@@ -15,7 +15,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push word [bp+var_mouseXDelta]
 		push word [bp+var_mouseYDelta]
 		push word varArgsEopArg(mouseLookOrMoveCursor, 2)
-		callWithRelocation l_varArgsEopDispatcher
+		callFromLoadModule varArgsEopDispatcher
 		add sp, 6
 		
 		jmp calcJump(0x1EFD3)

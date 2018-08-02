@@ -13,7 +13,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			
 			push si
 			push varArgsEopArg(enqueueDrawBlock, 1)
-			callWithRelocation l_varArgsEopDispatcher
+			callFromLoadModule varArgsEopDispatcher
 			add sp, 4
 			nop
 		endBlockAt startAbsolute + 13

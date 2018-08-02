@@ -28,7 +28,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			push word [bp+arg_height]
 			push word [bp+arg_row]
 			push word [bp+arg_column]
-			callWithRelocation o_enqueueGridCoords
+			callFromOverlay enqueueGridCoords
 			add sp, 6
 			
 			jmp endProc
@@ -46,7 +46,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			inc ax
 			add ax, 16
 			push ax
-			callWithRelocation o_enqueueGridCoords
+			callFromOverlay enqueueGridCoords
 			add sp, 6
 			
 			jmp endProc

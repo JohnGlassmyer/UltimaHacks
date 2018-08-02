@@ -54,7 +54,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			mov [bx+InputState_relativeY], ax
 			
 		push 2
-		callWithRelocation o_findItemAtCursor
+		callFromOverlay findItemAtCursor
 		add sp, 2
 		
 		mov [dseg_itemAtCursor_ps+2], dx
@@ -69,7 +69,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			
 			push word [0x24E4] ; ?? set by findItemAtCursor
 			push 2 ; Look interaction-mode
-			callWithRelocation o_describeClickedTerrain
+			callFromOverlay describeClickedTerrain
 			add sp, 4
 			
 			jmp endProc
@@ -82,7 +82,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		useItem:
 			push dx
 			push ax
-			callWithRelocation o_isItemCharacter
+			callFromOverlay isItemCharacter
 			add sp, 4
 			test al, al
 			jz notCharacter
@@ -105,15 +105,15 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				jmp doUse
 				
 			doTalk:
-				callWithRelocation o_talkModeProc
+				callFromOverlay talkModeProc
 				jmp endProc
 				
 			doUse:
-				callWithRelocation o_useModeProc
+				callFromOverlay useModeProc
 				jmp endProc
 				
 		lookItem:
-			callWithRelocation o_lookModeProc
+			callFromOverlay lookModeProc
 			
 			jmp endProc
 			

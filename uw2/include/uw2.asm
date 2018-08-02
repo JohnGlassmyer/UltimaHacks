@@ -6,7 +6,7 @@
 
 ; assuming that overlay 93 was expanded and moved to the end of the executable:
 ; java -jar UltimaPatcher.jar --exe=UW2.EXE \
-;     --expand_overlay_index=93 --expand_overlay_length=0x4000
+;     --expand_overlay_index=93 --expand_overlay_length=0x2800
 
 ; =============================================================================
 ; length of executable to be patched, and of expanded overlay
@@ -14,7 +14,7 @@
 ; assuming that the expanded overlay has been moved to the end of the file
 
 ORIGINAL_EXE_LENGTH                     EQU 0xA4D70
-EXPANDED_OVERLAY_LENGTH                 EQU 0x4000
+EXPANDED_OVERLAY_LENGTH                 EQU 0x2800
 EXPANDED_OVERLAY_EXE_LENGTH             EQU \
         ORIGINAL_EXE_LENGTH + EXPANDED_OVERLAY_LENGTH
 ORIGINAL_EOP_LENGTH                     EQU 0x0E2F
@@ -82,7 +82,7 @@ dseg_drawQueuing_currentRow             EQU 0x2C6C
 dseg_pitch                              EQU 0x33D6
 dseg_mapDungeonLevel                    EQU 0x36FA
 dseg_mappedTerrain_pn                   EQU 0x36FC
-dseg_interfaceContext                   EQU 0x5D60
+dseg_interfaceMode                      EQU 0x5D60
 dseg_interfaceRoutinesSelector          EQU 0x5D66
 dseg_cursorItem_ps                      EQU 0x6B0C
 dseg_avatarData_pn                      EQU 0x828A
@@ -98,115 +98,94 @@ dseg_drawQueueEnd_ps                    EQU 0x8720
 ; =============================================================================
 ; procedure far-call addresses
 ; -----------------------------------------------------------------------------
-; l_xxx if calling from the load module
-; o_xxx if calling from an overlay
 
-%define l_signedWordToString            0x0E72:0x1D1B
-%define o_signedWordToString            0x0028:0x1D1B
-%define l_unsignedDwordToString         0x0E72:0x1D42
-%define o_unsignedDwordToString         0x0028:0x1D42
-%define l_strcat                        0x0E72:0x27F3
-%define o_strcat                        0x0028:0x27F3
+defineProc 0x0028, 0x0E72, 0x1D1B, signedWordToString
+defineProc 0x0028, 0x0E72, 0x1D42, unsignedDwordToString
+defineProc 0x0028, 0x0E72, 0x27F3, strcat
 
-%define l_bindMouse                     0x1AB4:0x0082
-%define o_bindMouse                     0x0058:0x0082
-%define l_bindKey                       0x1AB4:0x0104
-%define o_bindKey                       0x0058:0x0104
-%define l_tryKeyAndMouseBindings        0x1AB4:0x02A0
-%define o_tryKeyAndMouseBindings        0x0058:0x02A0
+defineProc 0x0058, 0x1AB4, 0x0082, bindMouse
+defineProc 0x0058, 0x1AB4, 0x0104, bindKey
+defineProc 0x0058, 0x1AB4, 0x02A0, tryKeyAndMouseBindings
 
-%define l_setInterfaceRoutineBit        0x1B44:0x00AE
-%define o_setInterfaceRoutineBit        0x0068:0x00AE
+defineProc 0x0068, 0x1B44, 0x00AE, setInterfaceRoutineBit
 
-%define l_eraseCursorIfVisible          0x1B8F:0x0074
-%define o_eraseCursorIfVisible          0x0080:0x0074
-%define l_setCursorImage                0x1B8F:0x0745
-%define o_setCursorImage                0x0080:0x0745
-%define l_updateCursorRegion            0x1B8F:0x07AB
-%define o_updateCursorRegion            0x0080:0x07AB
-%define l_savePixelsAroundCursor        0x1B8F:0x0B70
-%define o_savePixelsAroundCursor        0x0080:0x0B70
-%define l_drawCursor                    0x1B8F:0x0C70
-%define o_drawCursor                    0x0080:0x0C70
+defineProc 0x0078, 0x1B6B, 0x018B, handleControlKey
 
-%define l_playSoundEffect               0x1C86:0x1DB2
-%define o_playSoundEffect               0x0088:0x1DB2
+defineProc 0x0080, 0x1B8F, 0x0074, eraseCursorIfVisible
+defineProc 0x0080, 0x1B8F, 0x0745, setCursorImage
+defineProc 0x0080, 0x1B8F, 0x07AB, updateCursorRegion
+defineProc 0x0080, 0x1B8F, 0x0B70, savePixelsAroundCursor
+defineProc 0x0080, 0x1B8F, 0x0C70, drawCursor
+defineProc 0x0080, 0x1B8F, 0x0DA7, moveCursor
 
-%define l_enqueueGridCoords             0x1FCD:0x000C
-%define o_enqueueGridCoords             0x00A8:0x000C
-%define l_enqueueDrawWithinLimits       0x1FCD:0x00D0
-%define o_enqueueDrawWithinLimits       0x00A8:0x00D0
-%define l_enqueueDrawBlock              0x1FCD:0x0D3C
-%define o_enqueueDrawBlock              0x00A8:0x0D3C
+defineProc 0x0088, 0x1C86, 0x1DB2, playSoundEffect
 
-%define l_sinAndCosInterpolated         0x2110:0x0EAE
-%define o_sinAndCosInterpolated         0x00B8:0x0EAE
+defineProc 0x00A8, 0x1FCD, 0x000C, enqueueGridCoords
+defineProc 0x00A8, 0x1FCD, 0x00D0, enqueueDrawWithinLimits
+defineProc 0x00A8, 0x1FCD, 0x0D3C, enqueueDrawBlock
 
-%define l_attack                        0x22FC:0x134B
-%define o_attack                        0x00D0:0x134B
+defineProc 0x00B8, 0x2110, 0x0EAE, sinAndCosInterpolated
 
-%define l_findItemAtCursor              0x2529:0x05E7
-%define o_findItemAtCursor              0x00E0:0x05E7
-%define l_describeClickedTerrain        0x2529:0x073F
-%define o_describeClickedTerrain        0x00E0:0x073F
-%define l_talkModeProc                  0x2529:0x0AFB
-%define o_talkModeProc                  0x00E0:0x0AFB
-%define l_lookModeProc                  0x2529:0x0B19
-%define o_lookModeProc                  0x00E0:0x0B19
-%define l_useModeProc                   0x2529:0x0C3A
-%define o_useModeProc                   0x00E0:0x0C3A
+defineProc 0x00D0, 0x22FC, 0x134B, attack
 
-%define l_isItemCharacter               0x28A1:0x0A87
-%define o_isItemCharacter               0x00F8:0x0A87
+defineProc 0x00E0, 0x2529, 0x05E7, findItemAtCursor
+defineProc 0x00E0, 0x2529, 0x073F, describeClickedTerrain
+defineProc 0x00E0, 0x2529, 0x0AFB, talkModeProc
+defineProc 0x00E0, 0x2529, 0x0B19, lookModeProc
+defineProc 0x00E0, 0x2529, 0x0C3A, useModeProc
+defineProc 0x00E0, 0x2529, 0x112A, setInteractionMode
 
-%define l_clearDrawQueue                0x2CAE:0x024A
-%define o_clearDrawQueue                0x0110:0x024A
-%define l_setupPerspective              0x2CAE:0x039A
-%define o_setupPerspective              0x0110:0x039A
-%define l_setupViewLimits               0x2CAE:0x05B8
-%define o_setupViewLimits               0x0110:0x05B8
-%define l_applyViewLimits               0x2CAE:0x1162
-%define o_applyViewLimits               0x0110:0x1162
+defineProc 0x00F8, 0x28A1, 0x0A87, isItemCharacter
 
-%define l_setPanelState                 0x30D3:0x02C8
-%define o_setPanelState                 0x0138:0x02C8
-%define l_slidePanel                    0x30D3:0x136B
-%define o_slidePanel                    0x0138:0x136B
+defineProc 0x0110, 0x2CAE, 0x024A, clearDrawQueue
+defineProc 0x0110, 0x2CAE, 0x039A, setupPerspective
+defineProc 0x0110, 0x2CAE, 0x05B8, setupViewLimits
+defineProc 0x0110, 0x2CAE, 0x1162, applyViewLimits
 
-%define l_getExternalizedString         0x3265:0x008E
-%define o_getExternalizedString         0x0148:0x008E
-%define l_strcat_far                    0x3265:0x090B
-%define o_strcat_far                    0x0148:0x090B
+defineProc 0x0128, 0x2FBE, 0x0056, move
+defineProc 0x0128, 0x2FBE, 0x0350, easyMove
 
-%define l_printStringToScroll           0x342C:0x01A0
-%define o_printStringToScroll           0x0168:0x01A0
+defineProc 0x0138, 0x30D3, 0x02C8, setPanelState
+defineProc 0x0138, 0x30D3, 0x0A06, animateSlidingPanel
+defineProc 0x0138, 0x30D3, 0x136B, slidePanel
 
-%define l_varArgsEopDispatcher          0x6417:0x0061
-%define o_varArgsEopDispatcher          0x02E8:0x0061
-%define l_byteArgEopDispatcher          0x6417:0x0066
-%define o_byteArgEopDispatcher          0x02E8:0x0066
-%define l_byCallSiteEopDispatcher       0x6417:0x006B
-%define o_byCallSiteEopDispatcher       0x02E8:0x006B
+defineProc 0x0148, 0x3265, 0x008E, getExternalizedString
+defineProc 0x0148, 0x3265, 0x090B, strcat_far
 
-%define l_changeMapLevel                0x641E:0x00A7
-%define o_changeMapLevel                0x02F0:0x00A7
+defineProc 0x0168, 0x342C, 0x01A0, printStringToScroll
 
-%define l_ark_say                       0x6469:0x003E
-%define o_ark_say                       0x0338:0x003E
+defineProc 0x02E8, 0x6417, 0x0061, varArgsEopDispatcher
+defineProc 0x02E8, 0x6417, 0x0066, byteArgEopDispatcher
+defineProc 0x02E8, 0x6417, 0x006B, byCallSiteEopDispatcher
 
-%define l_closeInventoryContainer       0x64F7:0x002F
-%define o_closeInventoryContainer       0x03C8:0x002F
+defineProc 0x02F0, 0x641E, 0x00A7, changeMapLevel
 
-%define l_tryToCast                     0x6504:0x0020
-%define o_tryToCast                     0x03D8:0x0020
-%define l_clickRunePanel                0x6504:0x0034
-%define o_clickRunePanel                0x03D8:0x0034
+defineProc 0x0308, 0x6448, 0x007A, clickOtherTrade
+defineProc 0x0308, 0x6448, 0x008E, clickAvatarTrade
 
-%define l_clickFlasks                   0x654A:0x002A
-%define o_clickFlasks                   0x0448:0x002A
+defineProc 0x0338, 0x6469, 0x003E, ark_say
+defineProc 0x0338, 0x6469, 0x007A, selectConversationOption
 
-%define l_trainSkill                    0x6599:0x0057
-%define o_trainSkill                    0x04D0:0x0057
+defineProc 0x0380, 0x64BF, 0x004D, transitionToInterfaceMode
+
+defineProc 0x03C8, 0x64F7, 0x002F, closeInventoryContainer
+
+defineProc 0x03D8, 0x6504, 0x0020, tryToCast
+defineProc 0x03D8, 0x6504, 0x0034, clickRunePanel
+
+defineProc 0x0448, 0x654A, 0x0020, clickCompass
+defineProc 0x0448, 0x654A, 0x002A, clickFlasks
+defineProc 0x0448, 0x654A, 0x0043, flipCharPanel
+
+defineProc 0x04D0, 0x6599, 0x0057, trainSkill
+defineProc 0x04D0, 0x6599, 0x0093, sleep
+defineProc 0x04D0, 0x6599, 0x009D, track
+
+defineProc 0x0478, 0x656A, 0x004D, adjustPitch
+defineProc 0x0478, 0x656A, 0x005C, printVersion
+defineProc 0x0478, 0x656A, 0x0061, printDebug
+
+defineProc 0x0538, 0x65E0, 0x0052, toggleBool
 
 ; =============================================================================
 ; structure offsets
@@ -215,7 +194,7 @@ dseg_drawQueueEnd_ps                    EQU 0x8720
 InputState_relativeX                    EQU 0x00
 InputState_relativeY                    EQU 0x02
 InputState_mouseButton                  EQU 0x06
-InputState_context                      EQU 0x08
+InputState_mode                         EQU 0x08
 
 Perspective_x                           EQU 0x0A
 Perspective_y                           EQU 0x12
@@ -257,6 +236,10 @@ ShiftStates_ctrl                        EQU 2
 %assign StringColor_ERROR               4 ; red
 %assign StringColor_BLUE                5
 %assign StringColor_MENU                6 ; dark green
+
+%assign InterfaceMode_NORMAL            1
+%assign InterfaceMode_MAP               2
+%assign InterfaceMode_CONVERSATION      4
 
 ; =============================================================================
 ; other values

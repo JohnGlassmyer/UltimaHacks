@@ -25,9 +25,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push word [bp+arg_firstArg+2]
 		push word [bp+arg_firstArg+0]
 		
-		; enqueueGridCoords
-		; called from enqueueDrawBlock in seg019 (0x1FCD / 0x00A8)
-			pushWithRelocation 0x00A8
+		; enqueueDrawBlock calls enqueueGridCoords from load module
+			pushWithRelocation procSegmentFromOverlay_enqueueDrawBlock
 			pop ax
 			cmp ax, [bp+____callerCs]
 			jnz notEnqueueGridCoords
@@ -37,9 +36,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			
 			notEnqueueGridCoords:
 			
-		; slidePanel
-		; called from animateSlidingPanel in seg037 (0x30D3 / 0x0138)
-			pushWithRelocation 0x0138
+		; animateSlidingPanel calls slidePanel from load module
+			pushWithRelocation procSegmentFromOverlay_animateSlidingPanel
 			pop ax
 			cmp ax, [bp+____callerCs]
 			jnz notSlidePanel
@@ -49,9 +47,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			
 			notSlidePanel:
 			
-		; trainSkill
-		; called from ovr096:0937
-			mov ax, 0x0937 + 5
+		; ark_x_skills calls trainSkill from overlay 96 with IP 0x093C
+			mov ax, 0x093C
 			cmp ax, [bp+____callerIp]
 			jnz notTrainSkill
 			

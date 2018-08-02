@@ -37,7 +37,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				mov word [es:0x0E15], 0x9090 ; <nop> <nop>
 				
 			; erase cursor at its current location
-				callWithRelocation o_eraseCursorIfVisible
+				callFromOverlay eraseCursorIfVisible
 				
 			; save cursor coordinates and place cursor in middle of screen
 				mov ax, [dseg_cursorX]
@@ -65,7 +65,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				
 			; save background pixels in new location (over 3d view)
 			; before setCursorImage redraws the cursor background
-				callWithRelocation o_savePixelsAroundCursor
+				callFromOverlay savePixelsAroundCursor
 				
 			; if the cursor is moving or using an item, don't change the image
 				cmp word [dseg_cursorMode], 0
@@ -73,7 +73,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				
 			; set cursor to crosshairs
 				push 0x106C
-				callWithRelocation o_setCursorImage
+				callFromOverlay setCursorImage
 				add sp, 2
 				
 			afterSettingToCrosshairs:
@@ -98,14 +98,14 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				
 			; saving the background pixels at the restored cursor location
 			; before updateCursorRegion redraws them
-				callWithRelocation o_savePixelsAroundCursor
+				callFromOverlay savePixelsAroundCursor
 				
 			; update cursor region, to select the cursor image appropriate
 			; to the restored cursor location
-				callWithRelocation o_updateCursorRegion
+				callFromOverlay updateCursorRegion
 				
 			; and draw the cursor (in its restored location)
-				callWithRelocation o_drawCursor
+				callFromOverlay drawCursor
 				
 		endProc:
 		

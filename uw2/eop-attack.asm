@@ -29,7 +29,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				mov [dseg_autoAttackType], al
 				
 			push ax
-			callWithRelocation o_attack
+			callFromOverlay attack
 			add sp, 2
 			
 			jmp endProc
@@ -38,7 +38,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			; attack with the last used attack-type, or the hard-coded default
 			movzx ax, [dseg_autoAttackType]
 			push ax
-			callWithRelocation o_attack
+			callFromOverlay attack
 			add sp, 2
 			
 			mov word [dseg_currentAttackScancode], 0x39 ; scancode of Spacebar

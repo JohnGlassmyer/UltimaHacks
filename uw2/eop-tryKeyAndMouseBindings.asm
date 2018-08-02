@@ -59,7 +59,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				afterClearingLastKeyTime:
 				
 			push word [dseg_inputState_pn]
-			callWithRelocation o_tryKeyAndMouseBindings
+			callFromOverlay tryKeyAndMouseBindings
 			add sp, 2
 			
 			; If a key or mouse binding was called, we can quit the loop.

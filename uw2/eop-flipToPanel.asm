@@ -27,7 +27,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		flipToSpecifiedPanel:
 			push ax
 			push 6
-			callWithRelocation o_setPanelState
+			callFromOverlay setPanelState
 			add sp, 4
 			
 			jmp endProc
@@ -35,7 +35,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		flipToInventoryPanel:
 			push 0
 			push 6
-			callWithRelocation o_setPanelState
+			callFromOverlay setPanelState
 			add sp, 4
 			
 		endProc:

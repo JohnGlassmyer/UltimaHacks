@@ -84,7 +84,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			
 		changeMapLevel:
 			push ax
-			callWithRelocation o_changeMapLevel
+			callFromOverlay changeMapLevel
 			add sp, 2
 			
 		endProc:

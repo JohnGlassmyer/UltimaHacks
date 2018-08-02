@@ -5,25 +5,30 @@
 [bits 16]
 
 startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
-		expanded overlay procedure: closeContainer
+		call eop-setInterfaceMode to disable mouseLook in conversations
 		
-	startBlockAt off_eop_closeContainer
+	startBlockAt 0x8886F
 		push bp
 		mov bp, sp
 		
-		; bp-based stack frame:
+		%assign arg_interfaceMode       0x06
+		%assign ____callerCs            0x04
 		%assign ____callerIp            0x02
 		%assign ____callerBp            0x00
 		
 		push si
 		push di
 		
-		callWithRelocation o_closeInventoryContainer
+		push word [bp+arg_interfaceMode]
+		push varArgsEopArg(setInterfaceMode, 1)
+		callFromOverlay varArgsEopDispatcher
+		add sp, 4
 		
 		pop di
 		pop si
 		mov sp, bp
 		pop bp
-		retn
-	endBlockAt off_eop_closeContainer_end
+		retf
+		
+	endBlockAt 0x888AA
 endPatch

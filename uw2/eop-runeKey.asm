@@ -45,14 +45,14 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			jmp haveRuneIndexInDi
 			
 		tryToCast:
-			callWithRelocation o_tryToCast
+			callFromOverlay tryToCast
 			jmp endProc
 			
 		clearRunes:
 			push 0
 			push 64
 			push 4
-			callWithRelocation o_playSoundEffect
+			callFromOverlay playSoundEffect
 			add sp, 6
 			
 			mov word [si+InputState_relativeX], 40
@@ -81,7 +81,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			push 0
 			push 64
 			push 45
-			callWithRelocation o_playSoundEffect
+			callFromOverlay playSoundEffect
 			add sp, 6
 			
 			jmp endProc
@@ -91,7 +91,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				push 0
 				push 64
 				push 3
-				callWithRelocation o_playSoundEffect
+				callFromOverlay playSoundEffect
 				add sp, 6
 				
 			; dx:ax := column:row
@@ -124,7 +124,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			push word [dseg_cursorMode]
 			mov word [dseg_cursorMode], 0
 			
-			callWithRelocation o_clickRunePanel
+			callFromOverlay clickRunePanel
 			
 			pop word [dseg_cursorMode]
 			

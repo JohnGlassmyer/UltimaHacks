@@ -74,7 +74,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				
 			; signal that the 3d view needs to be redrawn
 				push 2
-				callWithRelocation o_setInterfaceRoutineBit
+				callFromOverlay setInterfaceRoutineBit
 				add sp, 2
 				
 			mov ax, 1

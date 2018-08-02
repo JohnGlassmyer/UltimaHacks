@@ -34,7 +34,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			mov ax, [bp+arg_gridIndex]
 			add ax, dseg_mappedTerrain_pn
 			push ax
-			callWithRelocation o_enqueueDrawBlock
+			callFromOverlay enqueueDrawBlock
 			add sp, 2
 			
 			jmp endProc
@@ -47,7 +47,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		; print a warning message about approaching the draw queue limit
 			push cs
 			push offsetInEopSegment(drawQueueLimitWarningString)
-			callWithRelocation o_printStringToScroll
+			callFromOverlay printStringToScroll
 			add sp, 4
 			
 			mov byte [dseg_haveWarnedAboutDrawQueueLimit], 1

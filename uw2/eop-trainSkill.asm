@@ -33,7 +33,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		mov [bp+var_oldSkillValue], ax
 		
 		push word [bp+arg_skillNumber]
-		callWithRelocation o_trainSkill
+		callFromOverlay trainSkill
 		add sp, 2
 		
 		mov [bp+var_axFromTrainSkill], ax
@@ -60,7 +60,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				add ax, 31
 				or ax, 0x400
 				push ax
-				callWithRelocation o_getExternalizedString
+				callFromOverlay getExternalizedString
 				add sp, 2
 				
 				push dx
@@ -68,7 +68,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				push ss
 				lea ax, [bp+var_messageString]
 				push ax
-				callWithRelocation o_strcat_far
+				callFromOverlay strcat_far
 				add sp, 8
 				
 			; " increased by "
@@ -81,7 +81,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				push ax
 				lea ax, [bp+var_messageString]
 				push ax
-				callWithRelocation o_strcat
+				callFromOverlay strcat
 				add sp, 4
 				
 			; skill-value increase
@@ -89,14 +89,14 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				lea ax, [bp+var_fragmentString]
 				push ax
 				push di
-				callWithRelocation o_signedWordToString
+				callFromOverlay signedWordToString
 				add sp, 6
 				
 				lea ax, [bp+var_fragmentString]
 				push ax
 				lea ax, [bp+var_messageString]
 				push ax
-				callWithRelocation o_strcat
+				callFromOverlay strcat
 				add sp, 4
 				
 			; " to "
@@ -107,7 +107,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				push ax
 				lea ax, [bp+var_messageString]
 				push ax
-				callWithRelocation o_strcat
+				callFromOverlay strcat
 				add sp, 4
 				
 			; new skill value
@@ -116,14 +116,14 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				push ax
 				movzx ax, byte [si]
 				push ax
-				callWithRelocation o_signedWordToString
+				callFromOverlay signedWordToString
 				add sp, 6
 				
 				lea ax, [bp+var_fragmentString]
 				push ax
 				lea ax, [bp+var_messageString]
 				push ax
-				callWithRelocation o_strcat
+				callFromOverlay strcat
 				add sp, 4
 				
 			; "."
@@ -133,24 +133,24 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 				push ax
 				lea ax, [bp+var_messageString]
 				push ax
-				callWithRelocation o_strcat
+				callFromOverlay strcat
 				add sp, 4
 				
-			cmp word [dseg_interfaceContext], 4
+			cmp word [dseg_interfaceMode], 4
 			jz printInConversation
 			
 			printToScroll:
 				push ss
 				lea ax, [bp+var_messageString]
 				push ax
-				callWithRelocation o_printStringToScroll
+				callFromOverlay printStringToScroll
 				add sp, 4
 				
 			printInConversation:
 				push ss
 				lea ax, [bp+var_messageString]
 				push ax
-				callWithRelocation o_ark_say
+				callFromOverlay ark_say
 				add sp, 4
 				
 		endProc:
