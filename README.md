@@ -15,6 +15,10 @@ tables.
 The Java project, UltimaPatcher, requires Java 1.9 or higher to compile and uses
 the Apache Maven build system.
 
+Each game with patches applied is fully playable in DOSBox and most likely
+on original (386/486) hardware as well (though I haven't had a chance to
+test the patches on original hardware).
+
 ## Ultima VII: The Black Gate
 Changes focus on improving usability - allowing the player to do things
 more easily or more directly - and on adding keyboard control to what was
