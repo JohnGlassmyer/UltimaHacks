@@ -18,21 +18,11 @@ class Patch {
 		this.blocks = blocks;
 	}
 
-	void logSummary() {
-		logDescription();
-	}
-
-	void logDetails() {
-		logDescription();
-
-		L.info(String.format("patch has target file length of 0x%X", targetFileLength));
-
-		for (PatchBlock block : blocks) {
-			block.logDetails();
-		}
-	}
-
-	private void logDescription() {
+	void logDescription(boolean showPatchBytes) {
 		L.info(String.format("patch \"%s\" with %d block(s)", description, blocks.size()));
+		L.info(String.format("  target file length of 0x%X", targetFileLength));
+		for (PatchBlock block : blocks) {
+			block.logInfo(showPatchBytes);
+		}
 	}
 }

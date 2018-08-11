@@ -1,35 +1,25 @@
 package net.johnglassmyer.ultimapatcher;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.nio.channels.SeekableByteChannel;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-class InsertEdit extends Edit {
-	static private final Logger L = LogManager.getLogger(InsertEdit.class);
-
-	private final int positionInFile;
+class InsertEdit implements Edit {
+	private final int start;
 	private final int length;
 
 	InsertEdit(int positionInFile, int length) {
-		this.positionInFile = positionInFile;
+		this.start = positionInFile;
 		this.length = length;
 	}
 
 	@Override
-	void apply(RandomAccessFile file) throws IOException {
-		L.info(String.format("inserting 0x%X bytes at 0x%X", length, positionInFile));
+	public void apply(SeekableByteChannel channel) throws IOException {
+		byte[] tail = Util.read(channel, start, (int) (channel.size() - start));
 
-		int fileRemainderLength = (int) (file.length() - positionInFile);
-		byte[] fileRemainder = Util.readBytes(file, positionInFile, fileRemainderLength);
+		// insert zero-bytes
+		Util.write(channel, start, new byte[length]);
 
-		byte[] insertedZeros = new byte[length];
-		file.seek(positionInFile);
-		file.write(insertedZeros);
-
-		file.seek(positionInFile + length);
-		file.write(fileRemainder);
+		Util.write(channel, start + length, tail);
 	}
 
 	@Override
@@ -37,7 +27,7 @@ class InsertEdit extends Edit {
 		return String.format(
 				"%s(position: %X, length: %X)",
 				InsertEdit.class.getSimpleName(),
-				positionInFile,
+				start,
 				length);
 	}
 }

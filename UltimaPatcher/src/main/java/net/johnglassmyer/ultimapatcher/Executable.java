@@ -1,24 +1,74 @@
 package net.johnglassmyer.ultimapatcher;
 
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.stream.IntStream.range;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
-import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.common.collect.Streams;
+
 class Executable {
-	static private final Logger L = LogManager.getLogger(Executable.class);
+	private static final Logger L = LogManager.getLogger(Executable.class);
+
+	static Executable readFromFile(Path exePath) throws IOException {
+		FileChannel file = FileChannel.open(exePath, StandardOpenOption.READ);
+
+		MzHeader mzHeader = MzHeader.parseFrom(Util.read(file, 0, MzHeader.LENGTH));
+
+		LoadModule loadModule; {
+			int tableStartInFile = mzHeader.relocationTableStartInFile;
+			byte[] tableBytes = Util.read(
+					file, mzHeader.relocationTableStartInFile, mzHeader.relocationCount * 4);
+			LoadModuleRelocationTable table = LoadModuleRelocationTable.create(
+					tableStartInFile, tableBytes);
+			loadModule = new LoadModule(mzHeader, table);
+		}
+
+		FbovHeader fbovHeader = FbovHeader.create(
+				Util.read(file, mzHeader.calculateMzFileSize(), FbovHeader.LENGTH));
+		int fbovHeaderEnd = mzHeader.calculateMzFileSize() + FbovHeader.LENGTH;
+
+		List<Segment> segments = new ArrayList<>();
+		for (int i = 0; i < fbovHeader.segmentCount; i++) {
+			int entryStart = fbovHeader.segmentTableStartInFile + i * SegmentTableEntry.LENGTH;
+			SegmentTableEntry segmentTableEntry = SegmentTableEntry.create(
+					Util.read(file, entryStart, SegmentTableEntry.LENGTH));
+
+			int segmentStartInFile = mzHeader.loadModuleStartInFile()
+					+ segmentTableEntry.segmentBase * Util.PARAGRAPH_SIZE;
+
+			Optional<Overlay> optionalOverlay;
+			if (segmentTableEntry.isOverlay()) {
+				OverlayStub stub = OverlayStub.create(
+						Util.read(file, segmentStartInFile, segmentTableEntry.getLength()));
+
+				int overlayStartInFile = fbovHeaderEnd + stub.overlayStartFromFbovEnd;
+
+				int tableStartInFile = overlayStartInFile + stub.codeSize;
+				byte[] tableBytes = Util.read(file, tableStartInFile, stub.relocationTableLength);
+				OverlayRelocationTable table = OverlayRelocationTable.create(
+						segmentStartInFile, tableStartInFile, tableBytes);
+
+				optionalOverlay = Optional.of(new Overlay(stub, overlayStartInFile, table));
+			} else {
+				optionalOverlay = Optional.empty();
+			}
+
+			segments.add(new Segment(segmentTableEntry, segmentStartInFile, optionalOverlay));
+		}
+
+		return new Executable(
+				exePath, (int) file.size(), mzHeader, loadModule, fbovHeader, segments);
+	}
 
 	final Path path;
 	final LoadModule loadModule;
@@ -68,18 +118,18 @@ class Executable {
 		for (int iSegment = 0; iSegment < segments.size(); iSegment++) {
 			Segment segment = segments.get(iSegment);
 
-			int segmentStartInTable = iSegment * SegmentInfo.LENGTH;
-			String codeIndicator = segment.info.isCode() ? "C" : "-";
-			String overlayIndicator = segment.info.isOverlay() ? "O" : "-";
-			String dataIndicator = segment.info.isData() ? "D" : "-";
+			int segmentStartInTable = iSegment * SegmentTableEntry.LENGTH;
+			String codeIndicator = segment.tableEntry.isCode() ? "C" : "-";
+			String overlayIndicator = segment.tableEntry.isOverlay() ? "O" : "-";
+			String dataIndicator = segment.tableEntry.isData() ? "D" : "-";
 			int startInFile = calculateSegmentStartInFile(segment);
 			String textWithoutOverlayInfo = String.format(
 					" %4d | %04X | %04X:%04X-%04X | %06X |  %s%s%s  |",
 					iSegment,
 					segmentStartInTable,
-					segment.info.segmentBase,
-					segment.info.startOffset,
-					segment.info.endOffset,
+					segment.tableEntry.segmentBase,
+					segment.tableEntry.startOffset,
+					segment.tableEntry.endOffset,
 					startInFile,
 					codeIndicator,
 					overlayIndicator,
@@ -91,22 +141,21 @@ class Executable {
 				}
 
 				Overlay overlay = segment.optionalOverlay.get();
-				RelocationTableEditor tableEditor = overlay.createRelocationTableEditor();
-				SortedSet<Integer> relocationSitesInFile = tableEditor.getOriginalRelocationSitesInFile();
-				int overlayRelocationCount = relocationSitesInFile.size();
+				RelocationTable table = overlay.relocationTable;
 				int spareBytes = calculateSpareBytesAfterSegment(segment);
 				int procSpace = spareBytes < 0 ? 0 : spareBytes / StubProc.LENGTH;
 
+				// TODO: display capacity of table
+
 				L.info(String.format(
-						"%s %2d (%1d) | %06X | %06X | %06X | %4d/%4d ",
+						"%s %2d (%1d) | %06X | %06X | %06X | %4d",
 						textWithoutOverlayInfo,
 						spareBytes,
 						procSpace,
-						overlay.getCodeStart(),
-						overlay.getCodeLength(),
-						tableEditor.getTableStartInFile(),
-						tableEditor.getCapacity() - overlayRelocationCount,
-						tableEditor.getCapacity()));
+						overlay.startInFile,
+						overlay.stub.codeSize,
+						table.startInFile,
+						table.originalAddresses.size()));
 
 				if (showOverlayProcs) {
 					L.info("------+------+----------------+--------+-------+--------+--------+--------+--------+----------");
@@ -118,7 +167,7 @@ class Executable {
 								iProc,
 								OverlayStub.HEADER_LENGTH + iProc * StubProc.LENGTH,
 								procs.get(iProc).startInOverlay,
-								overlay.getCodeStart() + procs.get(iProc).startInOverlay));
+								overlay.startInFile + procs.get(iProc).startInOverlay));
 					});
 					// TODO: print "...." for each spare proc space in stub?
 					if (!procs.isEmpty()) {
@@ -135,68 +184,26 @@ class Executable {
 		}
 	}
 
-	private int calculateSegmentStartInFile(Segment segment) {
-		return mzHeader.calculcateLoadModuleStartInFile()
-				+ segment.info.segmentBase * Util.PARAGRAPH_SIZE
-				+ segment.info.startOffset;
-	}
-
-	private int calculateSpareBytesAfterSegment(Segment segment) {
-		int segmentStart = calculateSegmentStartInFile(segment);
-
-		NavigableSet<Integer> segmentStarts = new TreeSet<>();
-		segments.stream().map(this::calculateSegmentStartInFile).forEach(segmentStarts::add);
-		Optional<Integer> optionalFollowingSegmentStart =
-				Optional.ofNullable(segmentStarts.higher(segmentStart));
-
-		int spareBytesEnd = optionalFollowingSegmentStart.orElse(fileLength);
-
-		int segmentEnd = segmentStart + segment.info.getLength();
-		return spareBytesEnd - segmentEnd;
-	}
-
-	private void logPathAndFileLength() {
-		L.info(new HexValueMessage(fileLength, String.format("executable length (%s)", path)));
-	}
-
-	void listRelocations() throws IOException {
-		for (int relocation : loadModule.createRelocationTableEditor().getOriginalRelocationSitesInFile()) {
-			L.info(String.format("0x%06X (0x%06X in load module)", relocation, relocation - loadModule.getCodeStart()));
+	void listRelocations() {
+		for (int relocation : loadModule.relocationTable.originalAddresses) {
+			int relocationInFile = loadModule.mzHeader.loadModuleStartInFile() + relocation;
+			L.info(String.format("0x%06X (0x%06X in load module)", relocationInFile, relocation));
 		}
 
-		for (int i = 0; i < segments.size(); i++) {
-			Segment segment = segments.get(i);
-			if (segment.optionalOverlay.isPresent()) {
-				Overlay overlay = segment.optionalOverlay.get();
-				for (int relocation : overlay.createRelocationTableEditor().getOriginalRelocationSitesInFile()) {
-					L.info(String.format("0x%06X (0x%06X in overlay %d)", relocation, relocation - overlay.getCodeStart(), i));
+		Streams.mapWithIndex(segments.stream(), (segment, segmentIndex) -> {
+			segment.optionalOverlay.ifPresent(overlay -> {
+				for (int relocationOffset : overlay.relocationTable.originalAddresses) {
+					int relocationInFile = overlay.startInFile + relocationOffset;
+					L.info(String.format("0x%06X (0x%04X in overlay %d)",
+							relocationInFile, relocationOffset, segmentIndex));
 				}
-			}
-		}
+			});
+
+			return Util.TODO_USE_FOREACHWITHINDEX;
+		});
 	}
 
-	Collection<Patchable> getPatchables() {
-		Collection<Patchable> patchables = new ArrayList<>();
-		patchables.add(loadModule);
-		for (Segment segment : segments) {
-			if (segment.optionalOverlay.isPresent()) {
-				patchables.add(segment.optionalOverlay.get());
-			}
-		}
-		return patchables;
-	}
-
-	Set<Integer> collectRelocationFileOffsets() {
-		SortedSet<Integer> relocationFileOffsets = new TreeSet<>();
-		for (Patchable patchable : getPatchables()) {
-			RelocationTableEditor tableEditor = patchable.createRelocationTableEditor();
-			relocationFileOffsets.addAll(tableEditor.getOriginalRelocationSitesInFile());
-		}
-		return relocationFileOffsets;
-	}
-
-	List<Edit> expandOverlay(int segmentIndex, int newOverlayLength)
-			throws PatchApplicationException {
+	List<Edit> expandOverlay(int segmentIndex, int newOverlayLength) {
 		if (segmentIndex > segments.size()) {
 			throw new PatchApplicationException(
 					String.format("No segment %d in executable.", segmentIndex));
@@ -232,26 +239,26 @@ class Executable {
 		int newRelocationTableLength = newOverlayLength - newCodeLength;
 		L.info(String.format("New overlay code length is 0x%X", newCodeLength));
 		L.info(String.format("New relocation table length is 0x%X", newRelocationTableLength));
-		if (newCodeLength < overlay.getCodeLength()) {
+		if (newCodeLength < stub.codeSize) {
 			throw new PatchApplicationException("New code length < old code length.");
 		}
-		if (newRelocationTableLength < stub.relocationTableByteCount) {
+		if (newRelocationTableLength < stub.relocationTableLength) {
 			throw new PatchApplicationException(
 					"New relocation table length < old relocation table length.");
 		}
 
 		int lastOverlayStartInFile = segments.stream()
 				.flatMap(s -> s.optionalOverlay.stream())
-				.mapToInt(o -> o.getCodeStart())
+				.mapToInt(o -> o.startInFile)
 				.max()
 				.getAsInt();
-		boolean wasAlreadyLastOverlay = overlay.getCodeStart() == lastOverlayStartInFile;
+		boolean wasAlreadyLastOverlay = overlay.startInFile == lastOverlayStartInFile;
 
 		// Don't move the overlay if it is already the last thing in the file.
 		int newOverlayCodeStart;
 		if (wasAlreadyLastOverlay) {
 			L.info("Overlay will remain at end of file");
-			newOverlayCodeStart = overlay.getCodeStart();
+			newOverlayCodeStart = overlay.startInFile;
 		} else {
 			L.info(String.format("Overlay will be moved to end of file at 0x%X", fileLength));
 			newOverlayCodeStart = fileLength;
@@ -261,16 +268,16 @@ class Executable {
 		List<Integer> procStartsInOverlay = new ArrayList<>();
 		// Space the added procs at 0x100-byte intervals in the overlay code segment.
 		for (int iAddedProc = 0; iAddedProc < addedProcCount; iAddedProc++) {
-			int procStartInOverlay = overlay.getCodeLength() + iAddedProc * 0x100;
+			int procStartInOverlay = stub.codeSize + iAddedProc * 0x100;
 			procStartsInOverlay.add(procStartInOverlay);
 			int stubProcOffset =
 					OverlayStub.HEADER_LENGTH + (stub.procs.size() + iAddedProc) * StubProc.LENGTH;
 			L.info(String.format(
-					"0x%04X:0x%04X / 0x%04X:0x%04X -> eop:0x%04X",
-					stubSegment.info.segmentBase,
+					"0x%04X/0x%04X:0x%04X -> %d:0x%04X",
+					stubSegment.tableEntry.segmentBase,
+					segmentIndex * SegmentTableEntry.LENGTH,
 					stubProcOffset,
-					segmentIndex * SegmentInfo.LENGTH,
-					stubProcOffset,
+					segmentIndex,
 					procStartInOverlay));
 		}
 
@@ -281,7 +288,7 @@ class Executable {
 			 */
 			int editStartInFile = mzHeader.calculateMzFileSize()
 					+ FbovHeader.OVERLAY_BYTE_COUNT_OFFSET;
-			ByteBuffer buffer = bufferWrappingBytes(4);
+			ByteBuffer buffer = Util.littleEndianBytes(4);
 			int newOverlayByteCount = fbovHeader.overlayByteCount + newOverlayLength;
 			buffer.putInt(newOverlayByteCount);
 			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
@@ -291,10 +298,10 @@ class Executable {
 			 * edit to segment table: increase length of stub segment
 			 */
 			int editStartInFile = fbovHeader.segmentTableStartInFile
-					+ segmentIndex * SegmentInfo.LENGTH
-					+ SegmentInfo.END_OFFSET_OFFSET;
-			ByteBuffer buffer = bufferWrappingBytes(2);
-			int newStubEndOffset = stubSegment.info.endOffset + addedProcCount * StubProc.LENGTH;
+					+ segmentIndex * SegmentTableEntry.LENGTH
+					+ SegmentTableEntry.END_OFFSET_OFFSET;
+			ByteBuffer buffer = Util.littleEndianBytes(2);
+			int newStubEndOffset = stubSegment.tableEntry.endOffset + addedProcCount * StubProc.LENGTH;
 			buffer.putShort((short) newStubEndOffset);
 			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
 		}
@@ -306,13 +313,13 @@ class Executable {
 			 * - (leave relocation byte count as-is)
 			 * - increase proc count
 			 */
-			int editStartInFile = stub.startInFile + 4;
-			ByteBuffer buffer = bufferWrappingBytes(10);
+			int editStartInFile = stubSegment.startInFile + 4;
+			ByteBuffer buffer = Util.littleEndianBytes(10);
 			int newOverlayStartFromFbovEnd =
 					newOverlayCodeStart - (mzHeader.calculateMzFileSize() + FbovHeader.LENGTH);
 			buffer.putInt(newOverlayStartFromFbovEnd);
 			buffer.putShort((short) (newCodeLength));
-			buffer.putShort((short) (stub.relocationTableByteCount));
+			buffer.putShort((short) (stub.relocationTableLength));
 			buffer.putShort((short) (stub.procs.size() + addedProcCount));
 			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
 		}
@@ -321,7 +328,7 @@ class Executable {
 			 * edits to stub: add 5-byte entry for each new proc
 			 */
 			for (int iProc = 0; iProc < procStartsInOverlay.size(); iProc++) {
-				int editStartInFile = stub.startInFile
+				int editStartInFile = stubSegment.startInFile
 						+ OverlayStub.HEADER_LENGTH
 						+ (stub.procs.size() + iProc) * StubProc.LENGTH;
 				byte[] bytes = StubProc.bytesFor(procStartsInOverlay.get(iProc));
@@ -339,7 +346,7 @@ class Executable {
 			int additionalFileLength;
 			if (wasAlreadyLastOverlay) {
 				additionalFileLength = newOverlayLength -
-						(overlay.getCodeLength() + overlay.stub.relocationTableByteCount);
+						(stub.codeSize + stub.relocationTableLength);
 			} else {
 				additionalFileLength = newOverlayLength;
 			}
@@ -347,12 +354,12 @@ class Executable {
 
 			if (!wasAlreadyLastOverlay) {
 				edits.add(new CopyEdit(
-						overlay.getCodeStart(), overlay.getCodeLength(), newOverlayCodeStart));
+						overlay.startInFile, stub.codeSize, newOverlayCodeStart));
 			}
 
 			edits.add(new CopyEdit(
-					overlay.getCodeStart() + overlay.getCodeLength(),
-					stub.relocationTableByteCount,
+					overlay.startInFile + stub.codeSize,
+					stub.relocationTableLength,
 					newOverlayCodeStart + newCodeLength));
 
 			for (int procStartInOverlay : procStartsInOverlay) {
@@ -376,9 +383,27 @@ class Executable {
 		return edits;
 	}
 
-	private static ByteBuffer bufferWrappingBytes(int byteCount) {
-		ByteBuffer buffer = ByteBuffer.wrap(new byte[byteCount]);
-		buffer.order(LITTLE_ENDIAN);
-		return buffer;
+	private int calculateSegmentStartInFile(Segment segment) {
+		return mzHeader.loadModuleStartInFile()
+				+ segment.tableEntry.segmentBase * Util.PARAGRAPH_SIZE
+				+ segment.tableEntry.startOffset;
+	}
+
+	private int calculateSpareBytesAfterSegment(Segment segment) {
+		int segmentStart = calculateSegmentStartInFile(segment);
+
+		NavigableSet<Integer> segmentStarts = new TreeSet<>();
+		segments.stream().map(this::calculateSegmentStartInFile).forEach(segmentStarts::add);
+		Optional<Integer> optionalFollowingSegmentStart =
+				Optional.ofNullable(segmentStarts.higher(segmentStart));
+
+		int spareBytesEnd = optionalFollowingSegmentStart.orElse(fileLength);
+
+		int segmentEnd = segmentStart + segment.tableEntry.getLength();
+		return spareBytesEnd - segmentEnd;
+	}
+
+	private void logPathAndFileLength() {
+		L.info(new HexValueMessage(fileLength, String.format("executable length (%s)", path)));
 	}
 }

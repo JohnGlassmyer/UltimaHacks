@@ -1,8 +1,8 @@
 package net.johnglassmyer.ultimapatcher;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.nio.channels.SeekableByteChannel;
 
-abstract class Edit {
-	abstract void apply(RandomAccessFile file) throws IOException;
+interface Edit {
+	void apply(SeekableByteChannel channel) throws IOException;
 }

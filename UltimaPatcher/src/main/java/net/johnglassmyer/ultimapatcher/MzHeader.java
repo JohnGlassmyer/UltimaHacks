@@ -13,7 +13,7 @@ class MzHeader {
 	static private final int PAGE_SIZE = 512;
 	static private final String MZ_SIGNATURE = "MZ";
 
-	static MzHeader parseFromBytes(byte[] bytes) {
+	static MzHeader parseFrom(byte[] bytes) {
 		Util.checkBytesLength(bytes, LENGTH);
 
 		ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -62,7 +62,7 @@ class MzHeader {
 		L.info(new HexValueMessage(calculateMzFileSize(), "MZ file size"));
 		L.info(new HexValueMessage(relocationTableStartInFile, "relocation table start"));
 		L.info(new HexValueMessage(relocationCount, "relocation count"));
-		L.info(new HexValueMessage(calculcateLoadModuleStartInFile(), "load module start"));
+		L.info(new HexValueMessage(loadModuleStartInFile(), "load module start"));
 	}
 
 	int calculateMzFileSize() {
@@ -70,7 +70,7 @@ class MzHeader {
 		return filePages * PAGE_SIZE - shortage;
 	}
 
-	int calculcateLoadModuleStartInFile() {
+	int loadModuleStartInFile() {
 		return headerParagraphs * Util.PARAGRAPH_SIZE;
 	}
 }

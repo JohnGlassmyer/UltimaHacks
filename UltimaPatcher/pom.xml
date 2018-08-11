@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
 >
 	<modelVersion>4.0.0</modelVersion>
@@ -7,47 +8,44 @@
 	<version>0.0.1-SNAPSHOT</version>
 
 	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>9</maven.compiler.source>
 		<maven.compiler.target>9</maven.compiler.target>
 	</properties>
 
-	<build>
-		<plugins>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-					
-					<archive>
-						<manifest>
-							<mainClass>net.johnglassmyer.ultimapatcher.UltimaPatcher</mainClass>
-						</manifest>
-					</archive>
-					
-					<appendAssemblyId>false</appendAssemblyId>
-					<finalName>${project.name}</finalName>
-				</configuration>
-				<executions>
-					<execution>
-						<id>make-assembly</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-		</plugins>
-	</build>
+	<repositories>
+		<repository>
+			<id>johnglassmyer-github-releases</id>
+			<url>https://raw.github.com/JohnGlassmyer/maven-repository/master/releases</url>
+		</repository>
+	</repositories>
 
 	<dependencies>
 		<!-- compile -->
 		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>23.5-jre</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.jimfs</groupId>
+			<artifactId>jimfs</artifactId>
+			<version>1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>net.johnglassmyer.todo</groupId>
+			<artifactId>todo</artifactId>
+			<version>20180806d</version>
+		</dependency>
+		<dependency>
+			<groupId>net.johnglassmyer.uncheckers</groupId>
+			<artifactId>uncheckers</artifactId>
+			<version>20180805d</version>
+		</dependency>
+		<dependency>
 			<groupId>net.sf.jopt-simple</groupId>
 			<artifactId>jopt-simple</artifactId>
-			<version>5.0.3</version>
+			<version>6.0-alpha-2</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -65,4 +63,35 @@
 			<scope>runtime</scope>
 		</dependency>
 	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+
+					<archive>
+						<manifest>
+							<mainClass>net.johnglassmyer.ultimapatcher.UltimaPatcher</mainClass>
+						</manifest>
+					</archive>
+
+					<appendAssemblyId>false</appendAssemblyId>
+					<finalName>${project.name}</finalName>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 </project>

@@ -13,7 +13,7 @@ class FbovHeader {
 	static private final String FBOV_SIGNATURE = "FBOV";
 	static private final Logger L = LogManager.getLogger(FbovHeader.class);
 
-	static FbovHeader parseFrom(byte[] bytes) {
+	static FbovHeader create(byte[] bytes) {
 		ByteBuffer buffer = ByteBuffer.wrap(bytes);
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
 

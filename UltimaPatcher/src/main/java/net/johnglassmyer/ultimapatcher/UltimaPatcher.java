@@ -1,38 +1,41 @@
 package net.johnglassmyer.ultimapatcher;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static java.util.Comparator.comparingInt;
-import static net.johnglassmyer.ultimapatcher.Util.rethrowIoException;
-
+import static net.johnglassmyer.todo.Todo.todo;
+import static net.johnglassmyer.uncheckers.IoUncheckers.callUncheckedIoRunnable;
+import static net.johnglassmyer.uncheckers.IoUncheckers.callUncheckedIoSupplier;
+import static net.johnglassmyer.uncheckers.IoUncheckers.uncheckIoBiFunction;
+import static net.johnglassmyer.uncheckers.IoUncheckers.uncheckIoFunction;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
-import java.util.NavigableMap;
-import java.util.NavigableSet;
+
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
+import com.google.common.jimfs.Jimfs;
 
 import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import joptsimple.util.PathConverter;
+import joptsimple.util.PathProperties;
+import net.johnglassmyer.ultimapatcher.Segment.Patchable;
 
 /**
  * Applies patches to MS-DOS executables with overlays (originally, to Ultima VII's U7.EXE).
@@ -42,104 +45,102 @@ import joptsimple.OptionSpec;
  */
 public class UltimaPatcher {
 	static class Options {
+		private static final PathConverter EXISTING_FILE_PATH_CONVERTER =
+				new PathConverter(PathProperties.FILE_EXISTING);
+
 		static Options parseFromCommandLine(String[] args) throws OptionException {
 			OptionParser optionParser = new OptionParser();
 
-			OptionSpec<String> exeOption =
-					optionParser.accepts("exe")
-							.withRequiredArg();
+			OptionSpec<Path> exe = optionParser.accepts("exe")
+					.withRequiredArg()
+					.withValuesConvertedBy(EXISTING_FILE_PATH_CONVERTER);
 
-			OptionSpec<Void> listRelocationsOption =
-					optionParser.accepts("list_relocations")
-							.availableIf(exeOption);
+			OptionSpec<Void> listRelocations = optionParser.accepts("list-relocations")
+					.availableIf(exe);
 
-			OptionSpec<Void> showOverlayProcsOption =
-					optionParser.accepts("show_overlay_procs")
-							.availableIf(exeOption);
+			OptionSpec<Void> showOverlayProcs = optionParser.accepts("show-overlay-procs")
+					.availableIf(exe);
 
-			OptionSpec<Integer> expandOverlayIndexOption =
-					optionParser.accepts("expand_overlay_index")
-							.availableIf(exeOption)
-							.withRequiredArg()
-							.ofType(Integer.class);
+			OptionSpec<String> expandOverlay = optionParser.accepts("expand-overlay")
+					.availableIf(exe)
+					.withRequiredArg()
+					.ofType(String.class);
 
-			OptionSpec<String> expandOverlayLengthOption =
-					optionParser.accepts("expand_overlay_length")
-							.availableIf(expandOverlayIndexOption)
-							.requiredIf(expandOverlayIndexOption)
-							.withRequiredArg();
+			OptionSpec<Path> patch = optionParser.accepts("patch")
+					.requiredUnless(exe)
+					.withRequiredArg()
+					.withValuesConvertedBy(EXISTING_FILE_PATH_CONVERTER);
 
-			OptionSpec<String> patchOption =
-					optionParser.accepts("patch")
-							.requiredUnless(exeOption)
-							.availableUnless(expandOverlayIndexOption)
-							.withRequiredArg();
+			OptionSpec<Void> writeToExe = optionParser.accepts("write-to-exe")
+					.availableIf(exe);
 
-			OptionSpec<Void> showPatchBytesOption =
-					optionParser.accepts("show_patch_bytes")
-							.availableIf(patchOption);
+			OptionSpec<Path> writeHack = optionParser.accepts("write-hack")
+					.availableIf(exe)
+					.availableUnless(writeToExe)
+					.withRequiredArg()
+					.withValuesConvertedBy(new PathConverter());
 
-			OptionSpec<Void> ignoreTargetFileLengthOption =
-					optionParser.accepts("ignore_target_file_length")
-							.availableIf(exeOption, patchOption);
+			OptionSpec<Void> showPatchBytes = optionParser.accepts("show-patch-bytes")
+					.availableIf(patch);
+
+			OptionSpec<Void> ignoreExeLength = optionParser.accepts("ignore-exe-length")
+					.availableIf(exe, patch);
 
 			OptionSet optionSet = optionParser.parse(args);
 
 			return new Options(
-					getOptionally(optionSet, exeOption),
-					optionSet.has(listRelocationsOption),
-					optionSet.has(showOverlayProcsOption),
-					getOptionally(optionSet, expandOverlayIndexOption),
-					getOptionally(optionSet, expandOverlayLengthOption),
-					optionSet.valuesOf(patchOption),
-					optionSet.has(showPatchBytesOption),
-					optionSet.has(ignoreTargetFileLengthOption));
+					optionSet.valueOfOptional(exe),
+					optionSet.has(listRelocations),
+					optionSet.has(showOverlayProcs),
+					optionSet.valuesOf(expandOverlay),
+					optionSet.valuesOf(patch),
+					optionSet.has(writeToExe),
+					optionSet.valueOfOptional(writeHack),
+					optionSet.has(showPatchBytes),
+					optionSet.has(ignoreExeLength));
 		}
 
-		static <T> Optional<T> getOptionally(OptionSet optionSet, OptionSpec<T> option) {
-			if (optionSet.has(option)) {
-				return Optional.of(optionSet.valueOf(option));
-			} else {
-				return Optional.empty();
-			}
-		}
-
-		final Optional<String> optionalExePath;
+		final Optional<Path> exe;
 		final boolean listRelocations;
 		final boolean showOverlayProcs;
-		final Optional<Integer> optionalExpandOverlayIndex;
-		final Optional<String> optionalExpandOverlayLength;
-		final List<String> patchPaths;
+		final List<String> expandOverlay;
+		final List<Path> patch;
+		final boolean writeToExe;
+		final Optional<Path> writeHack;
 		final boolean showPatchBytes;
-		final boolean ignoreTargetFileLength;
+		final boolean ignoreExeLength;
 
 		Options(
-				Optional<String> optionalExePath,
+				Optional<Path> exe,
 				boolean listRelocations,
 				boolean showOverlayProcs,
-				Optional<Integer> optionalExpandOverlayIndex,
-				Optional<String> optionalExpandOverlayLength,
-				List<String> patchPaths,
+				List<String> expandOverlay,
+				List<Path> patch,
+				boolean writeToExe,
+				Optional<Path> writeHack,
 				boolean showPatchBytes,
-				boolean ignoreTargetFileLength) {
-			this.optionalExePath = optionalExePath;
+				boolean ignoreExeLength) {
+			this.exe = exe;
 			this.listRelocations = listRelocations;
 			this.showOverlayProcs = showOverlayProcs;
-			this.optionalExpandOverlayIndex = optionalExpandOverlayIndex;
-			this.optionalExpandOverlayLength = optionalExpandOverlayLength;
-			this.patchPaths = patchPaths;
+			this.expandOverlay = expandOverlay;
+			this.patch = patch;
+			this.writeToExe = writeToExe;
+			this.writeHack = writeHack;
 			this.showPatchBytes = showPatchBytes;
-			this.ignoreTargetFileLength = ignoreTargetFileLength;
+			this.ignoreExeLength = ignoreExeLength;
 		}
 	}
 
-	static private final Logger L = LogManager.getLogger(UltimaPatcher.class);
+	private static final Logger L = LogManager.getLogger(UltimaPatcher.class);
 
-	static public void main(String[] args) throws IOException {
+	public static void main(String[] args) {
 		Options options;
 		try {
 			options = Options.parseFromCommandLine(args);
 		} catch (OptionException e) {
+			L.error(e);
+
 			logUsage();
 
 			System.exit(-0xDEADBEEF);
@@ -147,181 +148,99 @@ public class UltimaPatcher {
 			options = null;
 		}
 
-		Optional<Executable> optionalExecutable = options.optionalExePath
-				.map(rethrowIoException(p -> readExeFile(Paths.get(p))));
-
-		List<Patch> patches = options.patchPaths.stream()
-				.map(rethrowIoException(p -> readPatchFile(Paths.get(p))))
+		List<Patch> patches = options.patch.stream()
+				.map(uncheckIoFunction(UltimaPatcher::readPatchFile))
 				.collect(Collectors.toList());
 
-		if (optionalExecutable.isPresent() && !patches.isEmpty()) {
-			Executable executable = optionalExecutable.get();
-			executable.logSummary();
+		if (options.exe.isPresent()) {
+			Path exePath = options.exe.get();
 
-			L.info(patches.size() + " patches:");
-			for (Patch patch : patches) {
-				patch.logSummary();
-
-				if (patch.targetFileLength != executable.fileLength
-						&& !options.ignoreTargetFileLength) {
-					L.error(String.format(
-							"Patch target file length 0x%X differs from executable length 0x%X."
-							+ " Use --ignore_target_file_length to bypass this check.",
-							patch.targetFileLength,
-							executable.fileLength));
-					System.exit(0xDEADBEEF);
-				}
-			}
-
-			Collection<OverwriteEdit> edits;
-			try {
-				edits = producePatchEdits(patches, executable, options.showPatchBytes);
-			} catch (PatchApplicationException e) {
-				L.error(e);
-
-				throw new RuntimeException("Cannot apply patch.", e);
-			}
-
-			applyEdits(executable.path, edits);
-		} else if (optionalExecutable.isPresent()) {
-			Executable executable = optionalExecutable.get();
-
-			if (options.optionalExpandOverlayIndex.isPresent()) {
-				int expandOverlayIndex = options.optionalExpandOverlayIndex.get();
-				int expandOverlayLength = Integer.decode(options.optionalExpandOverlayLength.get());
-
+			Executable expandedExecutable;
+			ImmutableList<Edit> expandOverlayEdits; {
+				Executable executable = callUncheckedIoSupplier(
+						() -> Executable.readFromFile(exePath));
 				executable.logSummary();
 
-				Collection<Edit> edits;
-				try {
-					edits = executable.expandOverlay(expandOverlayIndex, expandOverlayLength);
-				} catch (PatchApplicationException e) {
-					L.error(e);
+				ExecutableEditState expandedExecutableState =
+						withExpandedOverlays(executable, options.expandOverlay);
+				expandedExecutable = expandedExecutableState.executable;
+				expandOverlayEdits = expandedExecutableState.accumulatedEdits;
+			}
 
-					throw new RuntimeException("Cannot expand overlay.", e);
+			if (!patches.isEmpty()) {
+				L.info(patches.size() + " patches:");
+				for (Patch patch : patches) {
+					patch.logDescription(options.showPatchBytes);
+					if (patch.targetFileLength != expandedExecutable.fileLength
+							&& !options.ignoreExeLength) {
+						L.error(String.format(
+								"Patch target file length 0x%X differs from executable length 0x%X."
+								+ " Use --ignore-exe-length to bypass this check.",
+								patch.targetFileLength,
+								expandedExecutable.fileLength));
+						System.exit(0xDEADBEEF);
+					}
 				}
+			}
 
-				applyEdits(executable.path, edits);
-			} else if (options.listRelocations) {
-				executable.listRelocations();
+			ImmutableList<Edit> patchEdits = editsForPatches(expandedExecutable, patches);
+
+			ImmutableList<Edit> expandAndPatchEdits; {
+				ImmutableList.Builder<Edit> builder = ImmutableList.builder();
+				builder.addAll(expandOverlayEdits);
+				builder.addAll(patchEdits);
+				expandAndPatchEdits = builder.build();
+			}
+
+			if (!expandAndPatchEdits.isEmpty()) {
+				L.info("{} resulting edits:", expandAndPatchEdits.size());
+				expandAndPatchEdits.forEach(L::info);
+
+				if (options.writeToExe) {
+					L.info("writing to exe {}", exePath);
+					applyEdits(exePath, expandAndPatchEdits);
+				} else if (options.writeHack.isPresent()) {
+					Path hackPath = options.writeHack.get();
+					L.info("writing hack proto to {}", hackPath);
+					todo("write hack proto");
+				} else {
+					L.info("edits seem valid; use --write-to-exe to patch the executable"
+							+ " or --write-hack to compile edits into a .hack file");
+				}
 			} else {
-				executable.logDetails(options.showOverlayProcs);
+				if (options.listRelocations) {
+					expandedExecutable.listRelocations();
+				} else {
+					expandedExecutable.logDetails(options.showOverlayProcs);
+				}
 			}
 		} else if (!patches.isEmpty()) {
+			L.info(patches.size() + " patches:");
 			for (Patch patch : patches) {
-				patch.logDetails();
+				patch.logDescription(options.showPatchBytes);
 			}
 		}
 	}
 
-	static private void logUsage() {
+	private static void logUsage() {
 		L.info("For executable info:");
 		L.info("  java -jar UltimaPatcher.jar"
-				+ " --exe=<exeFile> [--list_relocations | --show_overlay_procs]");
+				+ " --exe=<exeFile> [--list-relocations | --show-overlay-procs]");
 		L.info("For patch info:");
-		L.info("  java -jar UltimaPatcher.jar --patch=<patchFile> [--show_patch_bytes]");
-		L.info("To move an overlay to the end of the file and lengthen it:");
+		L.info("  java -jar UltimaPatcher.jar --patch=<patchFile> [--show-patch-bytes]");
+		L.info("To apply patches directly to an executable:");
 		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> "
-				+ " --expand_overlay_index=<segmentIndex> --expand_overlay_length=<newLength>");
-		L.info("To apply patch to executable:");
-		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> --patch=<patchFile>");
+				+ " --expand-overlay=<segmentIndex>:<newLength>..."
+				+ " --patch=<patchFile>..."
+				+ " --write-to-exe");
+		L.info("To compile patches to a hack proto:");
+		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> "
+				+ " --expand-overlay=<segmentIndex>:<newLength>..."
+				+ " --patch=<patchFile>..."
+				+ " --write-hack=<hackProtoFile>");
 	}
 
-	static private Collection<OverwriteEdit> producePatchEdits(
-			List<Patch> patches, Executable exe, boolean showPatchBytes)
-					throws PatchApplicationException {
-		List<PatchBlock> allBlocks = patches.stream()
-				.flatMap(p -> p.blocks.stream())
-				.collect(Collectors.toList());
-
-		List<PatchBlock> blocksByStartInExe = allBlocks.stream()
-				.sorted(Comparator.comparing(b -> b.startInExe))
-				.collect(Collectors.toList());
-
-		PatchBlock lastBlock = null;
-		for (PatchBlock block : blocksByStartInExe) {
-			if (lastBlock != null) {
-				int lastBlockEnd = lastBlock.startInExe + lastBlock.codeBytes.length;
-				if (lastBlockEnd > block.startInExe) {
-					throw new PatchApplicationException(String.format(
-							"block for 0x%X overlaps block for 0x%X",
-							block.startInExe,
-							lastBlock.startInExe));
-				}
-			}
-
-			for (Integer relocationOffset : block.relocationSitesInBlock) {
-				if (relocationOffset > block.codeBytes.length) {
-					throw new PatchApplicationException(String.format(
-							"block for 0x%X of length 0x%X has out-of-range relocation offset 0x%X",
-							block.startInExe,
-							block.codeBytes.length,
-							relocationOffset));
-				}
-			}
-		}
-
-		NavigableMap<Integer, Patchable> patchablesByStart = new TreeMap<>();
-		for (Patchable patchable : exe.getPatchables()) {
-			patchablesByStart.put(patchable.getCodeStart(), patchable);
-		}
-
-		Collection<OverwriteEdit> edits = new ArrayList<>();
-
-		Map<Patchable, RelocationTableEditor> relocationTableEditors = new HashMap<>();
-
-		// <<multiple blocks could affect the mz relocation table>>
-		// <<multiple blocks could affect each overlay relocation table>>
-		for (PatchBlock block : allBlocks) {
-			block.logSummary();
-
-			int blockStart = block.startInExe;
-			int blockEnd = blockStart + block.codeBytes.length;
-
-			Entry<Integer, Patchable> lastBeforeStart = patchablesByStart.floorEntry(blockStart);
-			if (lastBeforeStart == null) {
-				throw new PatchApplicationException(String.format(
-						"block for 0x%X does not start within a patchable segment", blockStart));
-			}
-
-			Patchable patchable = lastBeforeStart.getValue();
-			if (blockEnd > patchable.getCodeStart() + patchable.getCodeLength()) {
-				throw new PatchApplicationException(String.format(
-						"block for 0x%X crosses boundaries of patchable segment", blockStart));
-			}
-
-			RelocationTableEditor relocationTableEditor = relocationTableEditors.computeIfAbsent(
-					patchable, p -> p.createRelocationTableEditor());
-
-			Set<Integer> newRelocationFileOffsets = block.relocationSitesInBlock
-					.stream().map(o -> blockStart + o).collect(Collectors.toSet());
-
-			relocationTableEditor.replaceRelocationsInRange(
-					blockStart, blockEnd, newRelocationFileOffsets);
-
-			edits.add(new OverwriteEdit(blockStart, block.codeBytes));
-		}
-
-		for (RelocationTableEditor relocationTableEditor : relocationTableEditors.values()) {
-			edits.addAll(relocationTableEditor.generateEdits());
-		}
-
-		return edits;
-	}
-
-	static private void applyEdits(
-			Path exePath, Collection<? extends Edit> edits) throws IOException {
-		// TODO: throw if OverwriteEdits overlap or extend beyond EOF
-		// (statefully, with respect to previous InsertEdits
-
-		try (RandomAccessFile file = new RandomAccessFile(exePath.toFile(), "rwd")) {
-			for (Edit edit : edits) {
-				edit.apply(file);
-			}
-		}
-	}
-
-	static private Patch readPatchFile(Path patchPath) throws IOException {
+	private static Patch readPatchFile(Path patchPath) throws IOException {
 		byte[] patchFileBytes = Files.readAllBytes(patchPath);
 		ByteBuffer buffer = ByteBuffer.wrap(patchFileBytes);
 		buffer.order(LITTLE_ENDIAN);
@@ -346,7 +265,10 @@ public class UltimaPatcher {
 		List<PatchBlock> patchBlocks = new ArrayList<>(blockCount);
 		for (int iBlock = 0; iBlock < blockCount; iBlock++) {
 			offsetInPatch -= Integer.BYTES;
-			int startInExe = buffer.getInt(offsetInPatch);
+			int segmentIndex = buffer.getInt(offsetInPatch);
+
+			offsetInPatch -= Integer.BYTES;
+			int startWithinSegment = buffer.getInt(offsetInPatch);
 
 			offsetInPatch -= Integer.BYTES;
 			int relocationCount = buffer.getInt(offsetInPatch);
@@ -365,95 +287,133 @@ public class UltimaPatcher {
 			buffer.position(offsetInPatch);
 			buffer.get(codeBytes);
 
-			patchBlocks.add(new PatchBlock(startInExe, codeBytes, relocationOffsets));
+			patchBlocks.add(new PatchBlock(
+					segmentIndex, startWithinSegment, codeBytes, relocationOffsets));
 		}
-
-		patchBlocks.sort(comparingInt(b -> b.startInExe));
 
 		return new Patch(description, targetFileLength, patchBlocks);
 	}
 
-	static private Executable readExeFile(Path exePath) throws IOException {
-		RandomAccessFile file = new RandomAccessFile(exePath.toFile(), "r");
+	private static ExecutableEditState withExpandedOverlays(
+			Executable executable, List<String> expandOverlayArgs) {
+		ExecutableEditOperation expandOverlaysOperation = expandOverlayArgs.stream()
+				.map(expandOverlayArg -> {
+					String[] segments = expandOverlayArg.split(":");
+					int segmentIndex = Integer.valueOf(segments[0]);
+					int newLength = Integer.decode(segments[1]);
+					L.info(String.format(
+							"expand segment %d to length of 0x%04X", segmentIndex, newLength));
+					return (ExecutableEditOperation) new ExpandOverlayOperation(
+							segmentIndex,
+							newLength,
+							uncheckIoBiFunction(UltimaPatcher::applyEditsInMemory));
+				})
+				.reduce(state -> state, (op1, op2) -> op1.andThen(op2));
 
-		MzHeader mzHeader = MzHeader.parseFromBytes(Util.readBytes(file, 0, MzHeader.LENGTH));
-		int mzRelocationTableLength = mzHeader.relocationCount * 4;
-		List<Integer> mzRelocationsInLoadModule = parseMzRelocationsInLoadModule(
-				Util.readBytes(file, mzHeader.relocationTableStartInFile, mzRelocationTableLength));
-		LoadModule loadModule = new LoadModule(mzHeader, mzRelocationsInLoadModule);
-
-		FbovHeader fbovHeader = FbovHeader
-				.parseFrom(Util.readBytes(file, mzHeader.calculateMzFileSize(), FbovHeader.LENGTH));
-
-		List<SegmentInfo> segmentInfos = new ArrayList<>();
-		long segmentInfoStart = fbovHeader.segmentTableStartInFile;
-		int fbovHeaderEnd = mzHeader.calculateMzFileSize() + FbovHeader.LENGTH;
-		for (int iSegment = 0; iSegment < fbovHeader.segmentCount; iSegment++) {
-			segmentInfos.add(SegmentInfo.parseFrom(
-					Util.readBytes(file, segmentInfoStart, SegmentInfo.LENGTH)));
-
-			segmentInfoStart += SegmentInfo.LENGTH;
-		}
-
-		// Assuming that each overlay ends where the next overlay starts,
-		// or at the end of the file.
-		NavigableSet<Integer> overlayStarts = new TreeSet<>();
-		Map<SegmentInfo, OverlayStub> overlayStubForSegmentInfo = new HashMap<>();
-		for (SegmentInfo segmentInfo : segmentInfos) {
-			if (segmentInfo.isOverlay()) {
-				int stubStart = mzHeader.calculcateLoadModuleStartInFile()
-						+ segmentInfo.segmentBase * Util.PARAGRAPH_SIZE;
-				OverlayStub stub = OverlayStub.create(
-						stubStart, Util.readBytes(file, stubStart, segmentInfo.getLength()));
-
-				overlayStubForSegmentInfo.put(segmentInfo, stub);
-
-				overlayStarts.add(fbovHeaderEnd + stub.overlayStartFromFbovEnd);
-			}
-		}
-
-		List<Segment> segments = new ArrayList<>();
-		for (SegmentInfo segmentInfo : segmentInfos) {
-			Optional<Overlay> optionalOverlay;
-			if (overlayStubForSegmentInfo.containsKey(segmentInfo)) {
-				OverlayStub stub = overlayStubForSegmentInfo.get(segmentInfo);
-
-				int overlayStart = fbovHeaderEnd + stub.overlayStartFromFbovEnd;
-
-				int tableStart = overlayStart + stub.codeSize;
-				byte[] relocationTableBytes = Util.readBytes(
-						file, tableStart, stub.relocationTableByteCount);
-
-				// The overlay ends where the following overlay starts, or where the file ends.
-				int tableEnd = tableStart + stub.relocationTableByteCount;
-				int overlayEnd = Optional.ofNullable(overlayStarts.ceiling(tableEnd))
-						.orElse((int) file.length());
-
-				optionalOverlay = Optional.of(
-						new Overlay(stub, overlayStart, overlayEnd, relocationTableBytes));
-			} else {
-				optionalOverlay = Optional.empty();
-			}
-
-			segments.add(new Segment(segmentInfo, optionalOverlay));
-		}
-
-		return new Executable(
-				exePath, (int) file.length(), mzHeader, loadModule, fbovHeader, segments);
+		return expandOverlaysOperation.apply(ExecutableEditState.startingWith(executable));
 	}
 
-	private static List<Integer> parseMzRelocationsInLoadModule(byte[] relocationTableBytes) {
-		ByteBuffer buffer = ByteBuffer.wrap(relocationTableBytes);
-		buffer.order(LITTLE_ENDIAN);
+	static Executable applyEditsInMemory(Executable executable, List<Edit> edits)
+			throws IOException {
+		// applying the edits to an in-memory file and then reading the edited executable
+		// from scratch is hackish, but doing this is easier than re-writing the Executable class.
 
-		List<Integer> relocationAddresses = new ArrayList<>();
-		int relocationCount = relocationTableBytes.length / 4;
-		for (int i = 0; i < relocationCount; i++) {
-			int offset = Short.toUnsignedInt(buffer.getShort());
-			int segment = Short.toUnsignedInt(buffer.getShort());
-			relocationAddresses.add(segment * Util.PARAGRAPH_SIZE + offset);
+		byte[] exeBytes;
+		try (FileChannel exeChannel = FileChannel.open(executable.path, StandardOpenOption.READ)) {
+			exeBytes = Util.read(exeChannel, 0, (int) exeChannel.size());
 		}
 
-		return relocationAddresses;
+		FileSystem jimfs = Jimfs.newFileSystem();
+		Path tempExePath = jimfs.getPath("temp.exe");
+		try (FileChannel tempExeChannel = FileChannel.open(
+				tempExePath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+			Util.write(tempExeChannel, 0, exeBytes);
+		}
+
+		applyEdits(tempExePath, edits);
+		return Executable.readFromFile(tempExePath);
+	}
+
+	private static ImmutableList<Edit> editsForPatches(Executable executable, List<Patch> patches) {
+		List<PatchBlock> blocks = patches.stream()
+				.flatMap(p -> p.blocks.stream())
+				.collect(Collectors.toList());
+
+		List<PatchBlock> blocksBySegmentAndOffset = blocks.stream()
+				.sorted(Comparator.comparing((PatchBlock b) -> b.segmentIndex)
+						.thenComparing(b -> b.startOffset))
+				.collect(Collectors.toList());
+
+		Streams.forEachPair(
+				blocksBySegmentAndOffset.stream(),
+				blocksBySegmentAndOffset.stream().skip(1),
+				(precedingBlock, block) -> {
+			if (block.segmentIndex == precedingBlock.segmentIndex
+					&& block.startOffset < precedingBlock.endOffset()) {
+				throw new PatchApplicationException(String.format(
+						"block for %s overlaps block for %s",
+						block.formatAddress(),
+						precedingBlock.formatAddress()));
+			}
+		});
+
+		ImmutableList<Edit> edits; {
+			ImmutableList.Builder<Edit> builder = ImmutableList.builder();
+
+			RelocationTracker relocationTracker = RelocationTracker.forExecutable(executable);
+
+			for (PatchBlock block : blocks) {
+				Patchable patchable = Optional.of(executable.segments.get(block.segmentIndex))
+						.map(Segment::patchable)
+						.orElseThrow(() -> new PatchApplicationException(String.format(
+							"no segment for block for %s", block.formatAddress())));
+
+				if (block.startOffset < patchable.startOffset()
+						|| block.endOffset() > patchable.endOffset()) {
+					throw new PatchApplicationException(String.format(
+							"block for %s is outside bounds of segment", block.formatAddress()));
+				}
+
+				for (Integer relocationWithinBlock : block.relocationsWithinBlock) {
+					if (!(0 <= relocationWithinBlock
+							&& relocationWithinBlock < block.codeBytes.length)) {
+						throw new PatchApplicationException(String.format(
+								"block for %s has out-of-range relocation offset 0x%X",
+								block.formatAddress(),
+								relocationWithinBlock));
+					}
+				}
+
+				Set<Integer> relocationOffsets = block.relocationsWithinBlock.stream()
+						.map(r -> block.startOffset + r)
+						.collect(Collectors.toSet());
+
+				relocationTracker.replaceInRange(
+						block.segmentIndex,
+						block.startOffset,
+						block.endOffset(),
+						relocationOffsets);
+
+				builder.add(new OverwriteEdit(
+						patchable.startInFile() + block.startOffset, block.codeBytes));
+			}
+
+			builder.addAll(relocationTracker.produceEdits());
+
+			edits = builder.build();
+		}
+
+		return edits;
+	}
+
+	static void applyEdits(Path filePath, Iterable<Edit> edits) {
+		callUncheckedIoRunnable(() -> {
+			try (SeekableByteChannel channel = FileChannel.open(
+					filePath, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
+				for (Edit edit : edits) {
+					edit.apply(channel);
+				}
+			}
+		});
 	}
 }

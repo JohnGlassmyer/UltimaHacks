@@ -8,27 +8,33 @@ import org.apache.logging.log4j.Logger;
 class PatchBlock {
 	static private final Logger L = LogManager.getLogger(PatchBlock.class);
 
-	final int startInExe;
+	final int segmentIndex;
+	final int startOffset;
 	final byte[] codeBytes;
-	final Collection<Integer> relocationSitesInBlock;
+	final Collection<Integer> relocationsWithinBlock;
 
-	PatchBlock(int startInExe, byte[] codeBytes, Collection<Integer> relocationSitesInBlock) {
-		this.startInExe = startInExe;
+	PatchBlock(
+			int segmentIndex,
+			int startOffset,
+			byte[] codeBytes,
+			Collection<Integer> relocationsWithinBlock) {
+		this.segmentIndex = segmentIndex;
+		this.startOffset = startOffset;
 		this.codeBytes = codeBytes;
-		this.relocationSitesInBlock = relocationSitesInBlock;
+		this.relocationsWithinBlock = relocationsWithinBlock;
 	}
 
-	void logSummary() {
-		logInfo(false);
+	int endOffset() {
+		return startOffset + codeBytes.length;
 	}
 
-	void logDetails() {
-		logInfo(true);
+	String formatAddress() {
+		return String.format("%d:0x%04X", segmentIndex, startOffset);
 	}
 
-	private void logInfo(boolean includeCodeBytes) {
-		L.info(String.format("block for offset 0x%X of length 0x%X having %d relocation site(s)",
-				startInExe, codeBytes.length, relocationSitesInBlock.size()));
+	void logInfo(boolean includeCodeBytes) {
+		L.info(String.format("block for %d:0x%04X of length 0x%X having %d relocation site(s)",
+				segmentIndex, startOffset, codeBytes.length, relocationsWithinBlock.size()));
 
 		if (includeCodeBytes) {
 			StringBuilder stringBuilder = new StringBuilder();
@@ -37,7 +43,7 @@ class PatchBlock {
 					stringBuilder.append("    ");
 				}
 				stringBuilder.append(String.format("%02X", codeBytes[i]));
-				stringBuilder.append(String.format(relocationSitesInBlock.contains(i) ? "-" : " "));
+				stringBuilder.append(String.format(relocationsWithinBlock.contains(i) ? "-" : " "));
 				if ((i + 1) % Util.PARAGRAPH_SIZE == 0) {
 					L.info(stringBuilder.toString());
 					stringBuilder.setLength(0);
