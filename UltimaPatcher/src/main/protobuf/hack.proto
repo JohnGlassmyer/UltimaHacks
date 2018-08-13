@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option java_package = "net.johnglassmyer.ultimahacks.common";
+option java_outer_classname = "HackProto";
+
+message Hack {
+	repeated Edit edit = 1;
+}
+
+message Edit {
+	oneof type {
+		InsertEdit insert = 1;
+		CopyEdit copy = 2;
+		OverwriteEdit overwrite = 3;
+	}
+}
+
+message InsertEdit {
+	uint64 start = 1;
+	uint64 length = 2;
+}
+
+message CopyEdit {
+	uint64 source = 1;
+	uint64 destination = 2;
+	uint64 length = 3;
+}
+
+message OverwriteEdit {
+	uint64 start = 1;
+	bytes data = 2;
+}

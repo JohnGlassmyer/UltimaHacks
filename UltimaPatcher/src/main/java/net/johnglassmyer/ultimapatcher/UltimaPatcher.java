@@ -1,7 +1,6 @@
 package net.johnglassmyer.ultimapatcher;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static net.johnglassmyer.todo.Todo.todo;
 import static net.johnglassmyer.uncheckers.IoUncheckers.callUncheckedIoRunnable;
 import static net.johnglassmyer.uncheckers.IoUncheckers.callUncheckedIoSupplier;
 import static net.johnglassmyer.uncheckers.IoUncheckers.uncheckIoBiFunction;
@@ -35,6 +34,7 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.util.PathConverter;
 import joptsimple.util.PathProperties;
+import net.johnglassmyer.ultimahacks.common.HackProto;
 import net.johnglassmyer.ultimapatcher.Segment.Patchable;
 
 /**
@@ -74,7 +74,7 @@ public class UltimaPatcher {
 			OptionSpec<Void> writeToExe = optionParser.accepts("write-to-exe")
 					.availableIf(exe);
 
-			OptionSpec<Path> writeHack = optionParser.accepts("write-hack")
+			OptionSpec<Path> writeHack = optionParser.accepts("write-hack-proto")
 					.availableIf(exe)
 					.availableUnless(writeToExe)
 					.withRequiredArg()
@@ -202,10 +202,10 @@ public class UltimaPatcher {
 				} else if (options.writeHack.isPresent()) {
 					Path hackPath = options.writeHack.get();
 					L.info("writing hack proto to {}", hackPath);
-					todo("write hack proto");
+					writeHackProto(hackPath, expandAndPatchEdits);
 				} else {
 					L.info("edits seem valid; use --write-to-exe to patch the executable"
-							+ " or --write-hack to compile edits into a .hack file");
+							+ " or --write-hack-proto to compile edits into a file");
 				}
 			} else {
 				if (options.listRelocations) {
@@ -313,7 +313,7 @@ public class UltimaPatcher {
 		return expandOverlaysOperation.apply(ExecutableEditState.startingWith(executable));
 	}
 
-	static Executable applyEditsInMemory(Executable executable, List<Edit> edits)
+	private static Executable applyEditsInMemory(Executable executable, List<Edit> edits)
 			throws IOException {
 		// applying the edits to an in-memory file and then reading the edited executable
 		// from scratch is hackish, but doing this is easier than re-writing the Executable class.
@@ -406,14 +406,24 @@ public class UltimaPatcher {
 		return edits;
 	}
 
-	static void applyEdits(Path filePath, Iterable<Edit> edits) {
+	private static void applyEdits(Path filePath, Iterable<Edit> edits) {
 		callUncheckedIoRunnable(() -> {
 			try (SeekableByteChannel channel = FileChannel.open(
 					filePath, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
 				for (Edit edit : edits) {
-					edit.apply(channel);
+					edit.applyToFile(channel);
 				}
 			}
 		});
+	}
+
+	private static void writeHackProto(Path hackPath, ImmutableList<Edit> expandAndPatchEdits) {
+		HackProto.Hack.Builder hackBuilder = HackProto.Hack.newBuilder();
+		expandAndPatchEdits.stream()
+				.map(Edit::toProtoMessage)
+				.forEachOrdered(hackBuilder::addEdit);
+
+		callUncheckedIoRunnable(() ->
+				Files.write(hackPath, hackBuilder.build().toByteArray()));
 	}
 }

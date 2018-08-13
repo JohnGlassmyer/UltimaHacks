@@ -3,6 +3,8 @@ package net.johnglassmyer.ultimapatcher;
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 
+import net.johnglassmyer.ultimahacks.common.HackProto;
+
 class CopyEdit implements Edit {
 	private final int source;
 	private final int length;
@@ -15,10 +17,21 @@ class CopyEdit implements Edit {
 	}
 
 	@Override
-	public void apply(SeekableByteChannel channel) throws IOException {
+	public void applyToFile(SeekableByteChannel channel) throws IOException {
 		byte[] bytes = Util.read(channel, source, length);
 
 		Util.write(channel, destination, bytes);
+	}
+
+	@Override
+	public net.johnglassmyer.ultimahacks.common.HackProto.Edit toProtoMessage() {
+		HackProto.Edit.Builder editBuilder = HackProto.Edit.newBuilder();
+		HackProto.CopyEdit.Builder copyBuilder = editBuilder.getCopyBuilder();
+		copyBuilder.setSource(source);
+		copyBuilder.setLength(length);
+		copyBuilder.setDestination(destination);
+
+		return editBuilder.build();
 	}
 
 	@Override
