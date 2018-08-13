@@ -9,6 +9,10 @@ class Segment {
 		int startOffset();
 
 		int endOffset();
+
+		default int endInFile() {
+			return startInFile() + (endOffset() - startOffset());
+		}
 	}
 
 	final SegmentTableEntry tableEntry;

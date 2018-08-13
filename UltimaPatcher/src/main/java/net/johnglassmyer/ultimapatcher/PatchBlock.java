@@ -29,7 +29,7 @@ class PatchBlock {
 	}
 
 	String formatAddress() {
-		return String.format("%d:0x%04X", segmentIndex, startOffset);
+		return Util.formatAddress(segmentIndex, startOffset);
 	}
 
 	void logInfo(boolean includeCodeBytes) {

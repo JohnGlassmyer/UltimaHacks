@@ -9,8 +9,8 @@ import java.nio.channels.SeekableByteChannel;
 class Util {
 	static final int PARAGRAPH_SIZE = 0x10;
 
-	static void printHexValue(long overlayCodeStart, String label) {
-		System.out.format("0x%8X %s\n", overlayCodeStart, label);
+	static String formatAddress(int segmentIndex, int offset) {
+		return String.format("%d:0x%04X", segmentIndex, offset);
 	}
 
 	static void checkBytesLength(byte[] bytes, long expected) {

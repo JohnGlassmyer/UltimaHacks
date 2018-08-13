@@ -16,6 +16,8 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.common.collect.Streams;
 
+import net.johnglassmyer.ultimapatcher.Segment.Patchable;
+
 class Executable {
 	private static final Logger L = LogManager.getLogger(Executable.class);
 
@@ -89,6 +91,17 @@ class Executable {
 		this.loadModule = loadModule;
 		this.fbovHeader = fbovHeader;
 		this.segments = segments;
+	}
+
+	Optional<Integer> segmentIndexForFileOffset(int fileOffset) {
+		// Linear search is good enough (?)
+		return range(0, segments.size()).boxed()
+				.filter(segmentIndex -> {
+					Patchable patchable = segments.get(segmentIndex).patchable();
+					return patchable.startInFile() <= fileOffset
+							&& fileOffset < patchable.endInFile();
+				})
+				.findFirst();
 	}
 
 	void logSummary() {

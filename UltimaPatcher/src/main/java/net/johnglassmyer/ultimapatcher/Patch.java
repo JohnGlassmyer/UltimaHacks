@@ -9,18 +9,18 @@ class Patch {
 	static private final Logger L = LogManager.getLogger(Patch.class);
 
 	final String description;
-	final int targetFileLength;
+	final int targetLength;
 	final Collection<PatchBlock> blocks;
 
-	Patch(String description, int targetFileLength, Collection<PatchBlock> blocks) {
+	Patch(String description, int targetLength, Collection<PatchBlock> blocks) {
 		this.description = description;
-		this.targetFileLength = targetFileLength;
+		this.targetLength = targetLength;
 		this.blocks = blocks;
 	}
 
 	void logDescription(boolean showPatchBytes) {
 		L.info(String.format("patch \"%s\" with %d block(s)", description, blocks.size()));
-		L.info(String.format("  target file length of 0x%X", targetFileLength));
+		L.info(String.format("  target file length of 0x%X", targetLength));
 		for (PatchBlock block : blocks) {
 			block.logInfo(showPatchBytes);
 		}

@@ -17,12 +17,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
-
+import java.util.stream.Stream;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -94,6 +98,14 @@ public class UltimaPatcher {
 					.withRequiredArg()
 					.withValuesConvertedBy(new PathConverter());
 
+			OptionSpec<String> fileToSegmented = optionParser.accepts("file-to-segmented")
+					.availableUnless(listRelocations, patch, hackProto)
+					.withRequiredArg();
+
+			OptionSpec<String> segmentedToFile = optionParser.accepts("segmented-to-file")
+					.availableUnless(listRelocations, patch, hackProto, fileToSegmented)
+					.withRequiredArg();
+
 			OptionSet optionSet = optionParser.parse(args);
 
 			return new Options(
@@ -106,7 +118,9 @@ public class UltimaPatcher {
 					optionSet.has(showPatchBytes),
 					optionSet.valueOfOptional(hackProto),
 					optionSet.has(writeToExe),
-					optionSet.valueOfOptional(writeHackProto));
+					optionSet.valueOfOptional(writeHackProto),
+					optionSet.valuesOf(fileToSegmented),
+					optionSet.valuesOf(segmentedToFile));
 		}
 
 		final Optional<Path> exe;
@@ -119,6 +133,8 @@ public class UltimaPatcher {
 		final Optional<Path> hackProto;
 		final boolean writeToExe;
 		final Optional<Path> writeHackProto;
+		final List<String> fileToSegmented;
+		final List<String> segmentedToFile;
 
 		private Options(
 				Optional<Path> exe,
@@ -130,7 +146,9 @@ public class UltimaPatcher {
 				boolean showPatchBytes,
 				Optional<Path> hackProto,
 				boolean writeToExe,
-				Optional<Path> writeHackProto) {
+				Optional<Path> writeHackProto,
+				List<String> fileToSegmented,
+				List<String> segmentedToFile) {
 			this.exe = exe;
 			this.listRelocations = listRelocations;
 			this.showOverlayProcs = showOverlayProcs;
@@ -141,17 +159,22 @@ public class UltimaPatcher {
 			this.hackProto = hackProto;
 			this.writeToExe = writeToExe;
 			this.writeHackProto = writeHackProto;
+			this.fileToSegmented = fileToSegmented;
+			this.segmentedToFile = segmentedToFile;
 		}
 	}
 
 	private static final Logger L = LogManager.getLogger(UltimaPatcher.class);
 
 	public static void main(String[] args) {
+		// TODO: break this procedure up, make it shorter
+
 		Options options;
 		try {
 			options = Options.parseFromCommandLine(args);
 		} catch (OptionException e) {
-			L.error(e);
+			Stream.iterate(e, Objects::nonNull, Throwable::getCause)
+					.forEach(System.err::println);
 
 			logUsage();
 
@@ -172,15 +195,15 @@ public class UltimaPatcher {
 		if (options.exe.isPresent()) {
 			Path exePath = options.exe.get();
 
-			Executable expandedExecutable;
+			Executable executable;
 			ImmutableList<Edit> expandOverlayEdits; {
-				Executable executable = callUncheckedIoSupplier(
-						() -> Executable.readFromFile(exePath));
-				executable.logSummary();
+				Executable originalExecutable =
+						callUncheckedIoSupplier(() -> Executable.readFromFile(exePath));
+				originalExecutable.logSummary();
 
 				ExecutableEditState expandedExecutableState =
-						withExpandedOverlays(executable, options.expandOverlay);
-				expandedExecutable = expandedExecutableState.executable;
+						withExpandedOverlays(originalExecutable, options.expandOverlay);
+				executable = expandedExecutableState.executable;
 				expandOverlayEdits = expandedExecutableState.accumulatedEdits;
 			}
 
@@ -188,19 +211,18 @@ public class UltimaPatcher {
 				L.info(patches.size() + " patches:");
 				for (Patch patch : patches) {
 					patch.logDescription(options.showPatchBytes);
-					if (patch.targetFileLength != expandedExecutable.fileLength
-							&& !options.ignoreExeLength) {
+					if (patch.targetLength != executable.fileLength && !options.ignoreExeLength) {
 						L.error(String.format(
 								"Patch target file length 0x%X differs from executable length 0x%X."
 								+ " Use --ignore-exe-length to bypass this check.",
-								patch.targetFileLength,
-								expandedExecutable.fileLength));
+								patch.targetLength,
+								executable.fileLength));
 						System.exit(0xDEADBEEF);
 					}
 				}
 			}
 
-			ImmutableList<Edit> patchEdits = editsForPatches(expandedExecutable, patches);
+			ImmutableList<Edit> patchEdits = editsForPatches(executable, patches);
 
 			ImmutableList<Edit> resultingEdits; {
 				ImmutableList.Builder<Edit> builder = ImmutableList.builder();
@@ -229,10 +251,37 @@ public class UltimaPatcher {
 							+ ".");
 				}
 			} else {
-				if (options.listRelocations) {
-					expandedExecutable.listRelocations();
+				if (!options.fileToSegmented.isEmpty()) {
+					L.info("file offsets converted to segment:offset addresses:");
+					logMappedValues(options.fileToSegmented, string -> {
+						int fileOffset = Integer.decode(string);
+						return executable.segmentIndexForFileOffset(fileOffset)
+								.map(segmentIndex -> Util.formatAddress(
+										segmentIndex,
+										fileOffset - executable.segments.get(segmentIndex)
+												.patchable().startInFile()))
+								.orElse("(no matching segment)");
+					});
+				} else if (!options.segmentedToFile.isEmpty()) {
+					L.info("segment:offset addresses converted to file offsets:");
+					logMappedValues(options.segmentedToFile, string -> {
+						SegmentAndOffset address = SegmentAndOffset.fromString(string);
+						int segmentIndex = address.segmentIndex;
+						if (0 <= segmentIndex  && segmentIndex < executable.segments.size()) {
+							Patchable patchable = executable.segments.get(segmentIndex).patchable();
+							int offset = address.offset;
+							if (patchable.startOffset() <= offset
+									&& offset <= patchable.endOffset()) {
+								return String.format("0x%05X",
+										patchable.startInFile() + offset - patchable.startOffset());
+							}
+						}
+						return "(invalid address)";
+					});
+				} else if (options.listRelocations) {
+					executable.listRelocations();
 				} else {
-					expandedExecutable.logDetails(options.showOverlayProcs);
+					executable.logDetails(options.showOverlayProcs);
 				}
 			}
 		} else if (!patches.isEmpty()) {
@@ -324,15 +373,13 @@ public class UltimaPatcher {
 	private static ExecutableEditState withExpandedOverlays(
 			Executable executable, List<String> expandOverlayArgs) {
 		ExecutableEditOperation expandOverlaysOperation = expandOverlayArgs.stream()
-				.map(expandOverlayArg -> {
-					String[] segments = expandOverlayArg.split(":");
-					int segmentIndex = Integer.valueOf(segments[0]);
-					int newLength = Integer.decode(segments[1]);
-					L.info(String.format(
-							"expand segment %d to length of 0x%04X", segmentIndex, newLength));
+				.map(SegmentAndOffset::fromString)
+				.map(address -> {
+					L.info(String.format("expand segment %d to length of 0x%04X",
+							address.segmentIndex, address.offset));
 					return (ExecutableEditOperation) new ExpandOverlayOperation(
-							segmentIndex,
-							newLength,
+							address.segmentIndex,
+							address.offset,
 							uncheckIoBiFunction(UltimaPatcher::applyEditsInMemory));
 				})
 				.reduce(state -> state, (op1, op2) -> op1.andThen(op2));
@@ -452,5 +499,13 @@ public class UltimaPatcher {
 
 		callUncheckedIoRunnable(() ->
 				Files.write(hackPath, hackBuilder.build().toByteArray()));
+	}
+
+	private static void logMappedValues(
+			Collection<String> values, Function<String, String> mapper) {
+		int maxLength = values.stream().mapToInt(String::length).max().getAsInt();
+		String format = "%" + (maxLength + 2) + "s";
+		values.forEach(value -> L.info(
+				String.format(format, value) + " => " + mapper.apply(value)));
 	}
 }
