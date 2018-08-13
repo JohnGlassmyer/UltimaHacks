@@ -16,17 +16,17 @@ message Edit {
 }
 
 message InsertEdit {
-	uint64 start = 1;
-	uint64 length = 2;
+	uint32 start = 1;
+	uint32 length = 2;
 }
 
 message CopyEdit {
-	uint64 source = 1;
-	uint64 destination = 2;
-	uint64 length = 3;
+	uint32 source = 1;
+	uint32 destination = 2;
+	uint32 length = 3;
 }
 
 message OverwriteEdit {
-	uint64 start = 1;
+	uint32 start = 1;
 	bytes data = 2;
 }

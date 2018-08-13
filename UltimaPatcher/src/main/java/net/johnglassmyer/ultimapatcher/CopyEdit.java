@@ -2,10 +2,21 @@ package net.johnglassmyer.ultimapatcher;
 
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
+import java.util.Optional;
 
 import net.johnglassmyer.ultimahacks.common.HackProto;
 
 class CopyEdit implements Edit {
+	static Optional<Edit> fromProtoEdit(HackProto.Edit protoEdit) {
+		if (!protoEdit.hasCopy()) {
+			return Optional.empty();
+		}
+
+		HackProto.CopyEdit copy = protoEdit.getCopy();
+
+		return Optional.of(new CopyEdit(copy.getSource(), copy.getLength(), copy.getDestination()));
+	}
+
 	private final int source;
 	private final int length;
 	private final int destination;

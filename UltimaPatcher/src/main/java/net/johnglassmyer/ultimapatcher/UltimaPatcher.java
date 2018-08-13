@@ -5,6 +5,8 @@ import static net.johnglassmyer.uncheckers.IoUncheckers.callUncheckedIoRunnable;
 import static net.johnglassmyer.uncheckers.IoUncheckers.callUncheckedIoSupplier;
 import static net.johnglassmyer.uncheckers.IoUncheckers.uncheckIoBiFunction;
 import static net.johnglassmyer.uncheckers.IoUncheckers.uncheckIoFunction;
+import static net.johnglassmyer.uncheckers.Uncheckers.uncheckFunction;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -66,25 +68,31 @@ public class UltimaPatcher {
 					.withRequiredArg()
 					.ofType(String.class);
 
+			OptionSpec<Void> ignoreExeLength = optionParser.accepts("ignore-exe-length")
+					.availableIf(exe);
+
 			OptionSpec<Path> patch = optionParser.accepts("patch")
 					.requiredUnless(exe)
+					.withRequiredArg()
+					.withValuesConvertedBy(EXISTING_FILE_PATH_CONVERTER);
+
+			OptionSpec<Void> showPatchBytes = optionParser.accepts("show-patch-bytes")
+					.availableIf(patch);
+
+			OptionSpec<Path> hackProto = optionParser.accepts("hack-proto")
+					.availableIf(exe)
+					.availableUnless(expandOverlay, patch)
 					.withRequiredArg()
 					.withValuesConvertedBy(EXISTING_FILE_PATH_CONVERTER);
 
 			OptionSpec<Void> writeToExe = optionParser.accepts("write-to-exe")
 					.availableIf(exe);
 
-			OptionSpec<Path> writeHack = optionParser.accepts("write-hack-proto")
+			OptionSpec<Path> writeHackProto = optionParser.accepts("write-hack-proto")
 					.availableIf(exe)
-					.availableUnless(writeToExe)
+					.availableUnless(hackProto, writeToExe)
 					.withRequiredArg()
 					.withValuesConvertedBy(new PathConverter());
-
-			OptionSpec<Void> showPatchBytes = optionParser.accepts("show-patch-bytes")
-					.availableIf(patch);
-
-			OptionSpec<Void> ignoreExeLength = optionParser.accepts("ignore-exe-length")
-					.availableIf(exe, patch);
 
 			OptionSet optionSet = optionParser.parse(args);
 
@@ -92,43 +100,47 @@ public class UltimaPatcher {
 					optionSet.valueOfOptional(exe),
 					optionSet.has(listRelocations),
 					optionSet.has(showOverlayProcs),
+					optionSet.has(ignoreExeLength),
 					optionSet.valuesOf(expandOverlay),
 					optionSet.valuesOf(patch),
-					optionSet.has(writeToExe),
-					optionSet.valueOfOptional(writeHack),
 					optionSet.has(showPatchBytes),
-					optionSet.has(ignoreExeLength));
+					optionSet.valueOfOptional(hackProto),
+					optionSet.has(writeToExe),
+					optionSet.valueOfOptional(writeHackProto));
 		}
 
 		final Optional<Path> exe;
 		final boolean listRelocations;
 		final boolean showOverlayProcs;
+		final boolean ignoreExeLength;
 		final List<String> expandOverlay;
 		final List<Path> patch;
-		final boolean writeToExe;
-		final Optional<Path> writeHack;
 		final boolean showPatchBytes;
-		final boolean ignoreExeLength;
+		final Optional<Path> hackProto;
+		final boolean writeToExe;
+		final Optional<Path> writeHackProto;
 
-		Options(
+		private Options(
 				Optional<Path> exe,
 				boolean listRelocations,
 				boolean showOverlayProcs,
+				boolean ignoreExeLength,
 				List<String> expandOverlay,
 				List<Path> patch,
-				boolean writeToExe,
-				Optional<Path> writeHack,
 				boolean showPatchBytes,
-				boolean ignoreExeLength) {
+				Optional<Path> hackProto,
+				boolean writeToExe,
+				Optional<Path> writeHackProto) {
 			this.exe = exe;
 			this.listRelocations = listRelocations;
 			this.showOverlayProcs = showOverlayProcs;
+			this.ignoreExeLength = ignoreExeLength;
 			this.expandOverlay = expandOverlay;
 			this.patch = patch;
-			this.writeToExe = writeToExe;
-			this.writeHack = writeHack;
 			this.showPatchBytes = showPatchBytes;
-			this.ignoreExeLength = ignoreExeLength;
+			this.hackProto = hackProto;
+			this.writeToExe = writeToExe;
+			this.writeHackProto = writeHackProto;
 		}
 	}
 
@@ -151,6 +163,11 @@ public class UltimaPatcher {
 		List<Patch> patches = options.patch.stream()
 				.map(uncheckIoFunction(UltimaPatcher::readPatchFile))
 				.collect(Collectors.toList());
+
+		Optional<Hack> optionalHack = options.hackProto
+				.map(uncheckIoFunction(Files::readAllBytes))
+				.map(uncheckFunction(HackProto.Hack::parseFrom))
+				.map(Hack::fromProtoHack);
 
 		if (options.exe.isPresent()) {
 			Path exePath = options.exe.get();
@@ -185,27 +202,31 @@ public class UltimaPatcher {
 
 			ImmutableList<Edit> patchEdits = editsForPatches(expandedExecutable, patches);
 
-			ImmutableList<Edit> expandAndPatchEdits; {
+			ImmutableList<Edit> resultingEdits; {
 				ImmutableList.Builder<Edit> builder = ImmutableList.builder();
 				builder.addAll(expandOverlayEdits);
 				builder.addAll(patchEdits);
-				expandAndPatchEdits = builder.build();
+				builder.addAll(optionalHack.map(hack -> hack.edits).orElse(ImmutableList.of()));
+				resultingEdits = builder.build();
 			}
 
-			if (!expandAndPatchEdits.isEmpty()) {
-				L.info("{} resulting edits:", expandAndPatchEdits.size());
-				expandAndPatchEdits.forEach(L::info);
+			if (!resultingEdits.isEmpty()) {
+				L.info("{} resulting edits:", resultingEdits.size());
+				resultingEdits.forEach(L::info);
 
 				if (options.writeToExe) {
 					L.info("writing to exe {}", exePath);
-					applyEdits(exePath, expandAndPatchEdits);
-				} else if (options.writeHack.isPresent()) {
-					Path hackPath = options.writeHack.get();
+					applyEdits(exePath, resultingEdits);
+				} else if (options.writeHackProto.isPresent()) {
+					Path hackPath = options.writeHackProto.get();
 					L.info("writing hack proto to {}", hackPath);
-					writeHackProto(hackPath, expandAndPatchEdits);
+					writeHackProto(hackPath, resultingEdits);
 				} else {
-					L.info("edits seem valid; use --write-to-exe to patch the executable"
-							+ " or --write-hack-proto to compile edits into a file");
+					L.info("Use --write-to-exe to patch the executable"
+							+ (options.hackProto.isPresent()
+									? ""
+									: " or --write-hack-proto to compile edits into a file")
+							+ ".");
 				}
 			} else {
 				if (options.listRelocations) {
@@ -229,15 +250,21 @@ public class UltimaPatcher {
 		L.info("For patch info:");
 		L.info("  java -jar UltimaPatcher.jar --patch=<patchFile> [--show-patch-bytes]");
 		L.info("To apply patches directly to an executable:");
-		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> "
+		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile>"
 				+ " --expand-overlay=<segmentIndex>:<newLength>..."
 				+ " --patch=<patchFile>..."
 				+ " --write-to-exe");
 		L.info("To compile patches to a hack proto:");
-		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile> "
+		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile>"
 				+ " --expand-overlay=<segmentIndex>:<newLength>..."
 				+ " --patch=<patchFile>..."
-				+ " --write-hack=<hackProtoFile>");
+				+ " --write-hack-proto=<hackProtoFile>");
+		L.info("For compiled hack proto info:");
+		L.info("  java -jar UltimaPatcher.jar --hack-proto=<hackProtoFile>");
+		L.info("To apply a compiled hack proto to an executable:");
+		L.info("  java -jar UltimaPatcher.jar --exe=<exeFile>"
+				+ " --hack-proto=<hackProtoFile>"
+				+ " --write-to-exe");
 	}
 
 	private static Patch readPatchFile(Path patchPath) throws IOException {

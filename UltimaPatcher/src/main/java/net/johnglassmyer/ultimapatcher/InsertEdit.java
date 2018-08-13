@@ -2,10 +2,21 @@ package net.johnglassmyer.ultimapatcher;
 
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
+import java.util.Optional;
 
 import net.johnglassmyer.ultimahacks.common.HackProto;
 
 class InsertEdit implements Edit {
+	static Optional<Edit> fromProtoEdit(HackProto.Edit protoEdit) {
+		if (!protoEdit.hasInsert()) {
+			return Optional.empty();
+		}
+
+		HackProto.InsertEdit insert = protoEdit.getInsert();
+
+		return Optional.of(new InsertEdit(insert.getStart(), insert.getLength()));
+	}
+
 	private final int start;
 	private final int length;
 

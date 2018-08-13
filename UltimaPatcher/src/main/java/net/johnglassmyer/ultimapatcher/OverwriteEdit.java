@@ -2,23 +2,35 @@ package net.johnglassmyer.ultimapatcher;
 
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
+import java.util.Optional;
 
 import com.google.protobuf.ByteString;
 
 import net.johnglassmyer.ultimahacks.common.HackProto;
 
 class OverwriteEdit implements Edit {
-	private final int start;
-	private final byte[] replacementBytes;
+	static Optional<Edit> fromProtoEdit(HackProto.Edit protoEdit) {
+		if (!protoEdit.hasOverwrite()) {
+			return Optional.empty();
+		}
 
-	OverwriteEdit(int startInFile, byte[] replacementBytes) {
-		this.start = startInFile;
-		this.replacementBytes = replacementBytes;
+		HackProto.OverwriteEdit overwrite = protoEdit.getOverwrite();
+
+		return Optional.of(
+				new OverwriteEdit(overwrite.getStart(), overwrite.getData().toByteArray()));
+	}
+
+	private final int start;
+	private final byte[] data;
+
+	OverwriteEdit(int start, byte[] data) {
+		this.start = start;
+		this.data = data;
 	}
 
 	@Override
 	public void applyToFile(SeekableByteChannel channel) throws IOException {
-		Util.write(channel, start, replacementBytes);
+		Util.write(channel, start, data);
 	}
 
 	@Override
@@ -26,7 +38,7 @@ class OverwriteEdit implements Edit {
 		HackProto.Edit.Builder editBuilder = HackProto.Edit.newBuilder();
 		HackProto.OverwriteEdit.Builder overwriteBuilder = editBuilder.getOverwriteBuilder();
 		overwriteBuilder.setStart(start);
-		overwriteBuilder.setData(ByteString.copyFrom(replacementBytes));
+		overwriteBuilder.setData(ByteString.copyFrom(data));
 
 		return editBuilder.build();
 	}
@@ -37,6 +49,6 @@ class OverwriteEdit implements Edit {
 				"%s(start: %X, length: %X)",
 				OverwriteEdit.class.getSimpleName(),
 				start,
-				replacementBytes.length);
+				data.length);
 	}
 }
