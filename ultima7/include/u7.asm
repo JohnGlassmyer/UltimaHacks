@@ -1,14 +1,27 @@
-; my convention: "ibo" for "item-buffer offset"
-; (which I think the game's developers called a "ref")
+; =============================================================================
+; Ultima VII: The Black Gate Hacks -- main
+; -----------------------------------------------------------------------------
+; by John Glassmyer
+; github.com/JohnGlassmyer/UltimaHacks
 
-; size of executable file to be patched
-EXPANDED_OVERLAY_U7_EXE_LENGTH          EQU 0xAB71E
+; assuming that overlay 343 is expanded:
+; java -jar UltimaPatcher.jar --exe=U7.EXE --expand-overlay=343,0x2000 (...)
 
-; file offsets
+; =============================================================================
+; length of executable to be patched, and of expanded overlay
+; -----------------------------------------------------------------------------
 
-off_dseg_segmentZero                    EQU 0x44C80
+ORIGINAL_EXE_LENGTH                     EQU 0xA8460
+EXPANDED_OVERLAY_LENGTH                 EQU 0x2000
+EXE_LENGTH                              EQU ORIGINAL_EXE_LENGTH \
+                                            + EXPANDED_OVERLAY_LENGTH
+EOP_ORIGINAL_CODE_LENGTH                EQU 0x0520
 
-; dseg offsets
+EOP_START_IN_FILE                       EQU ORIGINAL_EXE_LENGTH
+
+; =============================================================================
+; data-segment offsets
+; -----------------------------------------------------------------------------
 
 dseg_titleStringOffset                  EQU 0x1000
 dseg_versionStringOffset                EQU 0x1002
@@ -42,198 +55,165 @@ dseg_mouseYPosition                     EQU 0x7812
 dseg_itemTypeInfo                       EQU 0x8FA9
 dseg_playerActionSuspended              EQU 0x9BA8
 
-; proc addresses
-;   l_xxx: call from load module
-;   o_xxx: call from overlay
-%define l_sprintf                       0x0000:0x1468
-%define o_sprintf                       0x0000:0x1468
-%define l_strcat                        0x0000:0x2A4D
-%define o_strcat                        0x0000:0x2A4D
-%define l_strchr                        0x0000:0x2A86
-%define o_strchr                        0x0000:0x2A86
-%define l_strcmp                        0x0000:0x2ABC
-%define o_strcmp                        0x0000:0x2ABC
-%define l_deallocateNearMemory          0x0000:0x31B5
-%define o_deallocateNearMemory          0x0000:0x31B5
-%define l_allocateNearMemory            0x0000:0x31ED
-%define o_allocateNearMemory            0x0000:0x31ED
+; =============================================================================
+; segments and procedures (for far calls)
+; -----------------------------------------------------------------------------
 
-%define l_list_removeAndDestroyAll      0x0890:0x0540
-%define o_list_removeAndDestroyAll      0x0030:0x0540
-%define l_list_stepForward              0x0890:0x0577
-%define o_list_stepForward              0x0030:0x0577
+defineSegment 0, 0x0000, 0x0000
+defineAddress 0, 0x1468, sprintf
+defineAddress 0, 0x2A4D, strcat
+defineAddress 0, 0x2A86, strchr
+defineAddress 0, 0x2ABC, strcmp
+defineAddress 0, 0x31B5, deallocateNearMemory
+defineAddress 0, 0x31ED, allocateNearMemory
 
-%define l_isAvatarInCombatMode          0x0CBD:0x0009
-%define o_isAvatarInCombatMode          0x0068:0x0009
+defineSegment 6, 0x0030, 0x0890
+defineAddress 6, 0x0540, list_removeAndDestroyAll
+defineAddress 6, 0x0577, list_stepForward
 
-%define l_playSoundSimple               0x0DBF:0x0F4A
-%define o_playSoundSimple               0x00B8:0x0F4A
+defineSegment 13, 0x0068, 0x0CBD
+defineAddress 13, 0x0009, isAvatarInCombatMode
 
-%define l_findItemInContainer           0x19BF:0x00F7
-%define o_findItemInContainer           0x0170:0x00F7
-%define l_findItem                      0x19BF:0x024C
-%define o_findItem                      0x0170:0x024C
+defineSegment 23, 0x00B8, 0x0DBF
+defineAddress 23, 0x0F4A, playSoundSimple
 
-%define l_translateKeyWithoutDialogs    0x1C3E:0x0161
-%define o_translateKeyWithoutDialogs    0x01C0:0x0161
-%define l_pollKey                       0x1C3E:0x02D7
-%define o_pollKey                       0x01C0:0x02D7
-%define l_pollKeyToGlobalDiscarding     0x1C3E:0x0316
-%define o_pollKeyToGlobalDiscarding     0x01C0:0x0316
-%define l_getCtrlStatus                 0x1C3E:0x0361
-%define o_getCtrlStatus                 0x01C0:0x0361
-%define l_getLeftAndRightShiftStatus    0x1C3E:0x0375
-%define o_getLeftAndRightShiftStatus    0x01C0:0x0375
-%define l_readMouseStateIntoRef         0x1C3E:0x06FF
-%define o_readMouseStateIntoRef         0x01C0:0x06FF
+defineSegment 46, 0x0170, 0x19BF
+defineAddress 46, 0x00F7, findItemInContainer
+defineAddress 46, 0x024C, findItem
 
-%define l_selectMouseCursor             0x1CCF:0x0676
-%define o_selectMouseCursor             0x01C8:0x0676
+defineSegment 56, 0x01C0, 0x1C3E
+defineAddress 56, 0x0161, translateKeyWithoutDialogs
+defineAddress 56, 0x02D7, pollKey
+defineAddress 56, 0x0316, pollKeyToGlobalDiscarding
+defineAddress 56, 0x0361, getCtrlStatus
+defineAddress 56, 0x0375, getLeftAndRightShiftStatus
+defineAddress 56, 0x06FF, readMouseStateIntoRef
 
-%define l_isCursorInBounds              0x1DE8:0x198E
-%define o_isCursorInBounds              0x01E0:0x198E
+defineSegment 57, 0x01C8, 0x1CCF
+defineAddress 57, 0x0676, selectMouseCursor
 
-%define l_reportNoCanDo                 0x20D2:0x000C
-%define o_reportNoCanDo                 0x0200:0x000C
+defineSegment 60, 0x01E0, 0x1DE8
+defineAddress 60, 0x198E, isCursorInBounds
 
-%define l_getItemInSlot                 0x21F0:0x0040
-%define o_getItemInSlot                 0x0230:0x0040
+defineSegment 64, 0x0200, 0x20D2
+defineAddress 64, 0x000C, reportNoCanDo
 
-%define l_getItemXCoordinate            0x2807:0x003B
-%define o_getItemXCoordinate            0x02A8:0x003B
-%define l_getItemYCoordinate            0x2807:0x00C2
-%define o_getItemYCoordinate            0x02A8:0x00C2
-%define l_Item_getQuality               0x2807:0x0AF9
-%define o_Item_getQuality               0x02A8:0x0AF9
-%define l_Item_getQuantity              0x2807:0x0A2D
-%define o_Item_getQuantity              0x02A8:0x0A2D
-%define l_getItemBeingDragged           0x2807:0x21B1
-%define o_getItemBeingDragged           0x02A8:0x21B1
+defineSegment 70, 0x0230, 0x21F0
+defineAddress 70, 0x0040, getItemInSlot
 
-%define l_generateRandomIntegerInRange  0x19AA:0x0065
-%define o_generateRandomIntegerInRange  0x0158:0x0065
+defineSegment 85, 0x02A8, 0x2807
+defineAddress 85, 0x003B, getItemXCoordinate
+defineAddress 85, 0x00C2, getItemYCoordinate
+defineAddress 85, 0x0AF9, Item_getQuality
+defineAddress 85, 0x0A2D, Item_getQuantity
+defineAddress 85, 0x21B1, getItemBeingDragged
 
-%define l_sprintfMemoryUsage            0x2BE2:0x000D
-%define o_sprintfMemoryUsage            0x02C8:0x000D
+defineSegment 43, 0x0158, 0x19AA
+defineAddress 43, 0x0065, generateRandomIntegerInRange
 
-%define l_getNpcIbo                     0x2BEB:0x0DFF
-%define o_getNpcIbo                     0x02D0:0x0DFF
-%define l_getNpcBufferForIbo            0x2BEB:0x0050
-%define o_getNpcBufferForIbo            0x02D0:0x0050
-%define l_isNpcUnconscious              0x2BEB:0x125A
-%define o_isNpcUnconscious              0x02D0:0x125A
+defineSegment 89, 0x02C8, 0x2BE2
+defineAddress 89, 0x000D, sprintfMemoryUsage
 
-%define l_allocateFarMemory             0x3916:0x0028
-%define o_allocateFarMemory             0x0448:0x0028
+defineSegment 90, 0x02D0, 0x2BEB
+defineAddress 90, 0x0DFF, getNpcIbo
+defineAddress 90, 0x0050, getNpcBufferForIbo
+defineAddress 90, 0x125A, isNpcUnconscious
 
-%define l_allocateVoodooMemory          0x3AB8:0x0006
-%define o_allocateVoodooMemory          0x0588:0x0006
+defineSegment 137, 0x0448, 0x3916
+defineAddress 137, 0x0028, allocateFarMemory
 
-%define l_reactToItemMovement           0x3E19:0x0020
-%define o_reactToItemMovement           0x0848:0x0020
+defineSegment 177, 0x0588, 0x3AB8
+defineAddress 177, 0x0006, allocateVoodooMemory
 
-%define l_determineBulkOfContents       0x3E45:0x0020
-%define o_determineBulkOfContents       0x0880:0x0020
-%define l_determineWeightOfContents     0x3E45:0x0025
-%define o_determineWeightOfContents     0x0880:0x0025
-%define l_getItemTypeBulk               0x3E45:0x002F
-%define o_getItemTypeBulk               0x0880:0x002F
-%define l_determineWeightWithQuantity   0x3E45:0x0034
-%define o_determineWeightWithQuantity   0x0880:0x0034
+; load-module code segments < 206 <= overlay code segments
 
-%define l_runUsecode                    0x3ECD:0x002A
-%define l_startDialogLoopWithDialogType 0x3F7B:0x0043
-%define o_startDialogLoopWithDialogType 0x0AA0:0x0043
-%define l_startDialogLoopWithIboRef     0x3F7B:0x0048
-%define o_startDialgoLoopWithIboRef     0x0AA0:0x0048
-%define l_displayItemDialog             0x3F7B:0x00A7
-%define o_displayItemDialog             0x0AA0:0x00A7
+defineSegment 212, 0x06A0, 0x3D04
+defineAddress 212, 0x0052, barkOnItemInWorld
 
-%define l_barkOnItemInWorld             0x3D04:0x0052
-%define o_barkOnItemInWorld             0x06A0:0x0052
+defineSegment 214, 0x06B0, 0x3D0E
+defineAddress 214, 0x0048, getOuterContainer
+defineAddress 214, 0x0052, tryToPlaceItem
 
-%define l_getOuterContainer             0x3D0E:0x0048
-%define o_getOuterContainer             0x06B0:0x0048
-%define l_tryToPlaceItem                0x3D0E:0x0052
-%define o_tryToPlaceItem                0x06B0:0x0052
+defineSegment 215, 0x06B8, 0x3D16
+defineAddress 215, 0x0034, canCastSpell
+defineAddress 215, 0x002F, tryToCastSpell
 
-%define l_canCastSpell                  0x3D16:0x0034
-%define o_canCastSpell                  0x06B8:0x0034
-%define l_tryToCastSpell                0x3D16:0x002F
-%define o_tryToCastSpell                0x06B8:0x002F
+defineSegment 218, 0x06D0, 0x3D2A
+defineAddress 218, 0x0020, breakOffCombat
+defineAddress 218, 0x0025, beginCombat
 
-%define l_breakOffCombat                0x3D2A:0x0020
-%define o_breakOffCombat                0x06D0:0x0020
-%define l_beginCombat                   0x3D2A:0x0025
-%define o_beginCombat                   0x06D0:0x0025
+defineSegment 234, 0x0750, 0x3D7E
+defineAddress 234, 0x0020, havePlayerSelect
 
-%define l_havePlayerSelect              0x3D7E:0x0020
-%define o_havePlayerSelect              0x0750:0x0020
+defineSegment 243, 0x0798, 0x3DAA
+defineAddress 243, 0x0025, produceItemDisplayName
 
-%define l_produceItemDisplayName        0x3DAA:0x0025
-%define o_produceItemDisplayName        0x0798:0x0025
+defineSegment 251, 0x07D8, 0x3DDA
+defineAddress 251, 0x002F, setAudioState
 
-%define l_setAudioState                 0x3DDA:0x002F
-%define o_setAudioState                 0x07D8:0x002F
+defineSegment 260, 0x0820, 0x3E01
+defineAddress 260, 0x0039, doesSpellbookHaveSpell
 
-%define l_doesSpellbookHaveSpell        0x3E01:0x0039
-%define o_doesSpellbookHaveSpell        0x0820:0x0039
+defineSegment 265, 0x0848, 0x3E19
+defineAddress 265, 0x0020, reactToItemMovement
 
-%define l_use                           0x3E20:0x0039
-%define o_use                           0x0850:0x0039
+defineSegment 266, 0x0850, 0x3E20
+defineAddress 266, 0x0039, use
 
-%define l_unicode_getListNode           0x3EF8:0x0048
-%define o_unicode_getListNode           0x0A10:0x0048
+defineSegment 272, 0x0880, 0x3E45
+defineAddress 272, 0x0020, determineBulkOfContents
+defineAddress 272, 0x0025, determineWeightOfContents
+defineAddress 272, 0x002F, getItemTypeBulk
+defineAddress 272, 0x0034, determineWeightWithQuantity
 
-%define l_FarString_showInConversation  0x3F13:0x0020
-%define o_FarString_showInConversation  0x0A30:0x0020
-%define l_FarString_append              0x3F13:0x0034
-%define o_FarString_append              0x0A30:0x0034
-%define l_FarString_destructor          0x3F13:0x0048
-%define o_FarString_destructor          0x0A30:0x0048
-%define l_FarString_new                 0x3F13:0x004D
-%define o_FarString_new                 0x0A30:0x004D
+defineSegment 315, 0x09D8, 0x3ECD
+defineAddress 315, 0x002A, runUsecode
 
-%define l_beginConversation             0x3F57:0x0025
-%define o_beginConversation             0x0A88:0x0025
-%define l_endConversation               0x3F57:0x0043
-%define o_endConversation               0x0A88:0x0043
+defineSegment 322, 0x0A10, 0x3EF8
+defineAddress 322, 0x0048, unicode_getListNode
 
-%define l_Control_setInvisible          0x3F68:0x00AC
-%define o_Control_setInvisible          0x0A98:0x00AC
-%define l_Control_setVisible            0x3F68:0x00B1
-%define o_Control_setVisible            0x0A98:0x00B1
-%define l_Control_isVisible             0x3F68:0x00CF
-%define o_Control_isVisible             0x0A98:0x00CF
-%define l_insertNewNodeAtTail           0x3F68:0x00F2
-%define o_insertNewNodeAtTail           0x0A98:0x00F2
+defineSegment 326, 0x0A30, 0x3F13
+defineAddress 326, 0x0020, FarString_showInConversation
+defineAddress 326, 0x0034, FarString_append
+defineAddress 326, 0x0048, FarString_destructor
+defineAddress 326, 0x004D, FarString_new
 
-%define l_getOpenItemDialogListNode     0x3F7B:0x007A
-%define o_getOpenItemDialogListNode     0x0AA0:0x007A
-%define l_itemDialogInputLoop           0x3F7B:0x0084
-%define o_itemDialogInputLoop           0x0AA0:0x0084
-%define l_redrawDialogs                 0x3F7B:0x009D
-%define o_redrawDialogs                 0x0AA0:0x009D
-%define l_displayItemDialog             0x3F7B:0x00A7
-%define o_displayItemDialog             0x0AA0:0x00A7
-%define l_startDialogMode               0x3F7B:0x00B6
-%define o_startDialogMode               0x0AA0:0x00B6
+defineSegment 337, 0x0A88, 0x3F57
+defineAddress 337, 0x0025, beginConversation
+defineAddress 337, 0x0043, endConversation
 
-%define l_doYesNoDialog                 0x3FAB:0x0057
-%define o_doYesNoDialog                 0x0AC0:0x0057
+defineSegment 339, 0x0A98, 0x3F68
+defineAddress 339, 0x009D, dragItem_secondDesctructor ; TODO: better name
+defineAddress 339, 0x00AC, Control_setInvisible
+defineAddress 339, 0x00B1, Control_setVisible
+defineAddress 339, 0x00CF, Control_isVisible
+defineAddress 339, 0x00F2, insertNewNodeAtTail
 
-%define l_Slider_stepDown               0x3FBA:0x0025
-%define o_Slider_stepDown               0x0AD8:0x0025
-%define l_Slider_stepUp                 0x3FBA:0x0020
-%define o_Slider_stepUp                 0x0AD8:0x0020
-%define l_Slider_processInput           0x3FBA:0x002A
-%define o_Slider_processInput           0x0AD8:0x002A
+defineSegment 340, 0x0AA0, 0x3F7B
+defineAddress 340, 0x0043, startDialogLoopWithDialogType
+defineAddress 340, 0x0048, startDialogLoopWithIboRef
+defineAddress 340, 0x007A, getOpenItemDialogListNode
+defineAddress 340, 0x0084, itemDialogInputLoop
+defineAddress 340, 0x009D, redrawDialogs
+defineAddress 340, 0x00A7, displayItemDialog
+defineAddress 340, 0x00B6, startDialogMode
 
-; expanded overlay procedure dispatcher
-%define l_eopDispatcher                 0x3FC0:0x0075
-%define o_eopDispatcher                 0x0AE0:0x0075
+defineSegment 343, 0x0AB8, 0x3FA4, eop
+defineAddress 343, 0x0061, eopDispatcher
 
-; enums
+defineSegment 344, 0x0AC0, 0x3FAB
+defineAddress 344, 0x0057, doYesNoDialog
+
+defineSegment 347, 0x0AD8, 0x3FBA
+defineAddress 347, 0x0025, Slider_stepDown
+defineAddress 347, 0x0020, Slider_stepUp
+defineAddress 347, 0x002A, Slider_processInput
+
+defineSegment 349, 0x0AE8, 0x3FC8, dseg
+
+; =============================================================================
+; enumerations
+; -----------------------------------------------------------------------------
 
 InventorySlot_BACKPACK                  EQU 0
 InventorySlot_LEFT_HAND                 EQU 1
@@ -241,7 +221,9 @@ InventorySlot_RIGHT_HAND                EQU 2
 
 MouseCursor_Finger                      EQU 0
 
-; structures
+; =============================================================================
+; structure offsets
+; -----------------------------------------------------------------------------
 
 MouseState_button                       EQU 1
 MouseState_action                       EQU 7
