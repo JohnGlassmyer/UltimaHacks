@@ -217,16 +217,19 @@ class Executable {
 	List<Edit> expandOverlay(int segmentIndex, int newOverlayLength) {
 		if (segmentIndex > segments.size()) {
 			throw new PatchApplicationException(
-					String.format("No segment %d in executable.", segmentIndex));
+					String.format("No segment %d in executable", segmentIndex));
 		}
 
 		Segment stubSegment = segments.get(segmentIndex);
 		if (!stubSegment.optionalOverlay.isPresent()) {
 			throw new PatchApplicationException(
-					String.format("Segment %d is not an overlay segment.", segmentIndex));
+					String.format("Segment %d is not an overlay segment", segmentIndex));
 		}
 
-		L.info("Attempting to expand overlay segment {}.", segmentIndex);
+		L.info(String.format(
+				"Attempting to expand overlay %d to a length of 0x%04X",
+				segmentIndex,
+				newOverlayLength));
 
 		Overlay overlay = stubSegment.optionalOverlay.get();
 		OverlayStub stub = overlay.stub;
@@ -234,11 +237,11 @@ class Executable {
 		int spareBytes = calculateSpareBytesAfterSegment(stubSegment);
 		if (spareBytes < StubProc.LENGTH) {
 			throw new PatchApplicationException(String.format(
-					"No room in segment %s overlay stub for more procs.", segmentIndex));
+					"No room in segment %s overlay stub for more procs", segmentIndex));
 		}
 
 		int addedProcCount = spareBytes / StubProc.LENGTH;
-		L.info("Stub has room for {} additional procs.", addedProcCount);
+		L.info("  Stub has room for {} additional procs", addedProcCount);
 
 		/**
 		 * Ultima VII code seemed to need around 2 bytes of relocation data per 50 code bytes.
@@ -248,14 +251,14 @@ class Executable {
 		double relocationFraction = (double) 2 / 40;
 		int newCodeLength = (int) (newOverlayLength * (1 - relocationFraction));
 		int newRelocationTableLength = newOverlayLength - newCodeLength;
-		L.info(String.format("New overlay code length is 0x%X", newCodeLength));
-		L.info(String.format("New relocation table length is 0x%X", newRelocationTableLength));
+		L.info(String.format("  New overlay code length is 0x%X", newCodeLength));
+		L.info(String.format("  New relocation table length is 0x%X", newRelocationTableLength));
 		if (newCodeLength < stub.codeSize) {
-			throw new PatchApplicationException("New code length < old code length.");
+			throw new PatchApplicationException("New code length < old code length");
 		}
 		if (newRelocationTableLength < stub.relocationTableLength) {
 			throw new PatchApplicationException(
-					"New relocation table length < old relocation table length.");
+					"New relocation table length < old relocation table length");
 		}
 
 		int lastOverlayStartInFile = segments.stream()
@@ -268,14 +271,14 @@ class Executable {
 		// Don't move the overlay if it is already the last thing in the file.
 		int newOverlayCodeStart;
 		if (wasAlreadyLastOverlay) {
-			L.info("Overlay will remain at end of file");
+			L.info("  Overlay will remain at end of file");
 			newOverlayCodeStart = overlay.startInFile;
 		} else {
-			L.info(String.format("Overlay will be moved to end of file at 0x%X", fileLength));
+			L.info(String.format("  Overlay will be moved to end of file at 0x%X", fileLength));
 			newOverlayCodeStart = fileLength;
 		}
 
-		L.info("New procs (stub proc -> overlay proc):");
+		L.info("  New procs (stub proc -> overlay proc):");
 		List<Integer> procStartsInOverlay = new ArrayList<>();
 		// Space the added procs at 0x100-byte intervals in the overlay code segment.
 		for (int iAddedProc = 0; iAddedProc < addedProcCount; iAddedProc++) {
@@ -284,7 +287,7 @@ class Executable {
 			int stubProcOffset =
 					OverlayStub.HEADER_LENGTH + (stub.procs.size() + iAddedProc) * StubProc.LENGTH;
 			L.info(String.format(
-					"0x%04X/0x%04X:0x%04X -> %d:0x%04X",
+					"    0x%04X/0x%04X:0x%04X -> %d:0x%04X",
 					stubSegment.tableEntry.segmentBase,
 					segmentIndex * SegmentTableEntry.LENGTH,
 					stubProcOffset,

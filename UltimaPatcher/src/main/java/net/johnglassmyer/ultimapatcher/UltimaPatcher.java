@@ -380,14 +380,10 @@ public class UltimaPatcher {
 			Executable executable, List<String> expandOverlayArgs) {
 		ExecutableEditOperation expandOverlaysOperation = expandOverlayArgs.stream()
 				.map(SegmentAndOffset::fromString)
-				.map(address -> {
-					L.info(String.format("expand segment %d to length of 0x%04X",
-							address.segmentIndex, address.offset));
-					return (ExecutableEditOperation) new ExpandOverlayOperation(
-							address.segmentIndex,
-							address.offset,
-							uncheckIoBiFunction(UltimaPatcher::applyEditsInMemory));
-				})
+				.map(address -> (ExecutableEditOperation) new ExpandOverlayOperation(
+						address.segmentIndex,
+						address.offset,
+						uncheckIoBiFunction(UltimaPatcher::applyEditsInMemory)))
 				.reduce(state -> state, (op1, op2) -> op1.andThen(op2));
 
 		return expandOverlaysOperation.apply(ExecutableEditState.startingWith(executable));
