@@ -5,9 +5,14 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
+import java.util.stream.Stream;
 
 class Util {
 	static final int PARAGRAPH_SIZE = 0x10;
+
+	static int maxStringLength(Stream<String> stringStream) {
+		return stringStream.mapToInt(String::length).max().getAsInt();
+	}
 
 	static String formatAddress(int segmentIndex, int offset) {
 		return String.format("%d:0x%04X", segmentIndex, offset);

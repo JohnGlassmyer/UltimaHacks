@@ -16,16 +16,27 @@ class OverwriteEdit implements Edit {
 
 		HackProto.OverwriteEdit overwrite = protoEdit.getOverwrite();
 
-		return Optional.of(
-				new OverwriteEdit(overwrite.getStart(), overwrite.getData().toByteArray()));
+		return Optional.of(new OverwriteEdit(
+				Optional.empty(), overwrite.getStart(), overwrite.getData().toByteArray()));
 	}
 
+	private final Optional<String> explanation;
 	private final int start;
 	private final byte[] data;
 
-	OverwriteEdit(int start, byte[] data) {
+	private OverwriteEdit(Optional<String> explanation, int start, byte[] data) {
+		this.explanation = explanation;
 		this.start = start;
 		this.data = data;
+	}
+
+	OverwriteEdit(String explanation, int start, byte[] data) {
+		this(Optional.of(explanation), start, data);
+	}
+
+	@Override
+	public Optional<String> explanation() {
+		return explanation;
 	}
 
 	@Override

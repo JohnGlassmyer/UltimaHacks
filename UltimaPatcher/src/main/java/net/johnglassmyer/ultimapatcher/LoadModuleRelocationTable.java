@@ -32,7 +32,10 @@ class LoadModuleRelocationTable extends RelocationTable {
 		ByteBuffer buffer = Util.littleEndianBytes(Short.BYTES);
 		buffer.putShort((short) newCount);
 
-		return new OverwriteEdit(RELOCATION_TABLE_COUNT_FILE_OFFSET, buffer.array());
+		return new OverwriteEdit(
+				"relocation count in MZ header",
+				RELOCATION_TABLE_COUNT_FILE_OFFSET,
+				buffer.array());
 	}
 
 	@Override
@@ -46,6 +49,6 @@ class LoadModuleRelocationTable extends RelocationTable {
 			buffer.putShort((short) segmentPart);
 		}
 
-		return new OverwriteEdit(startInFile, buffer.array());
+		return new OverwriteEdit("load-module relocation table", startInFile, buffer.array());
 	}
 }

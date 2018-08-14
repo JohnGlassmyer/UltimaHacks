@@ -14,17 +14,29 @@ class CopyEdit implements Edit {
 
 		HackProto.CopyEdit copy = protoEdit.getCopy();
 
-		return Optional.of(new CopyEdit(copy.getSource(), copy.getLength(), copy.getDestination()));
+		return Optional.of(new CopyEdit(
+				Optional.empty(), copy.getSource(), copy.getLength(), copy.getDestination()));
 	}
 
+	private final Optional<String> explanation;
 	private final int source;
 	private final int length;
 	private final int destination;
 
-	CopyEdit(int sourceStart, int length, int destinationStart) {
-		this.source = sourceStart;
+	private CopyEdit(Optional<String> explanation, int source, int length, int destination) {
+		this.explanation = explanation;
+		this.source = source;
 		this.length = length;
-		this.destination = destinationStart;
+		this.destination = destination;
+	}
+
+	CopyEdit(String explanation, int source, int length, int destination) {
+		this(Optional.of(explanation), source, length, destination);
+	}
+
+	@Override
+	public Optional<String> explanation() {
+		return explanation;
 	}
 
 	@Override

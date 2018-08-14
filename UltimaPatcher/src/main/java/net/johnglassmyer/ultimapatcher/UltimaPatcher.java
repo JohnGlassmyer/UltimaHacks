@@ -29,7 +29,6 @@ import java.util.function.Function;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.common.jimfs.Jimfs;
@@ -164,6 +163,10 @@ public class UltimaPatcher {
 		}
 	}
 
+	enum Justification {
+		LEFT, RIGHT;
+	}
+
 	private static final Logger L = LogManager.getLogger(UltimaPatcher.class);
 
 	public static void main(String[] args) {
@@ -234,7 +237,7 @@ public class UltimaPatcher {
 
 			if (!resultingEdits.isEmpty()) {
 				L.info("{} resulting edits:", resultingEdits.size());
-				resultingEdits.forEach(L::info);
+				logMappedValues(Justification.LEFT, resultingEdits, Edit::explanation);
 
 				if (options.writeToExe) {
 					L.info("writing to exe {}", exePath);
@@ -253,30 +256,33 @@ public class UltimaPatcher {
 			} else {
 				if (!options.fileToSegmented.isEmpty()) {
 					L.info("file offsets converted to segment:offset addresses:");
-					logMappedValues(options.fileToSegmented, string -> {
+					logMappedValues(Justification.RIGHT, options.fileToSegmented, string -> {
 						int fileOffset = Integer.decode(string);
 						return executable.segmentIndexForFileOffset(fileOffset)
 								.map(segmentIndex -> Util.formatAddress(
 										segmentIndex,
 										fileOffset - executable.segments.get(segmentIndex)
 												.patchable().startInFile()))
-								.orElse("(no matching segment)");
+								.or(() -> Optional.of("(no matching segment)"));
 					});
 				} else if (!options.segmentedToFile.isEmpty()) {
 					L.info("segment:offset addresses converted to file offsets:");
-					logMappedValues(options.segmentedToFile, string -> {
+					logMappedValues(Justification.RIGHT, options.segmentedToFile, string -> {
 						SegmentAndOffset address = SegmentAndOffset.fromString(string);
 						int segmentIndex = address.segmentIndex;
 						if (0 <= segmentIndex  && segmentIndex < executable.segments.size()) {
 							Patchable patchable = executable.segments.get(segmentIndex).patchable();
 							int offset = address.offset;
+							int patchableZeroInFile =
+									patchable.startInFile() - patchable.startOffset();
 							if (patchable.startOffset() <= offset
 									&& offset <= patchable.endOffset()) {
-								return String.format("0x%05X",
-										patchable.startInFile() + offset - patchable.startOffset());
+								return Optional.of(String.format(
+										"0x%05X", offset - patchableZeroInFile));
 							}
 						}
-						return "(invalid address)";
+
+						return Optional.of("(invalid address)");
 					});
 				} else if (options.listRelocations) {
 					executable.listRelocations();
@@ -469,7 +475,9 @@ public class UltimaPatcher {
 						relocationOffsets);
 
 				builder.add(new OverwriteEdit(
-						patchable.startInFile() + block.startOffset, block.codeBytes));
+						"patch block for " + block.formatAddress(),
+						patchable.startInFile() + block.startOffset,
+						block.codeBytes));
 			}
 
 			builder.addAll(relocationTracker.produceEdits());
@@ -501,11 +509,17 @@ public class UltimaPatcher {
 				Files.write(hackPath, hackBuilder.build().toByteArray()));
 	}
 
-	private static void logMappedValues(
-			Collection<String> values, Function<String, String> mapper) {
-		int maxLength = values.stream().mapToInt(String::length).max().getAsInt();
-		String format = "%" + (maxLength + 2) + "s";
+	private static <T> void logMappedValues(
+			Justification justification,
+			Collection<T> values,
+			Function<T, Optional<String>> mapper) {
+		int maxStringLength = Util.maxStringLength(values.stream().map(Object::toString));
+		String format =
+				"%" + (justification == Justification.LEFT ? "-" : "") + maxStringLength + "s";
+
 		values.forEach(value -> L.info(
-				String.format(format, value) + " => " + mapper.apply(value)));
+				"  "
+				+ String.format(format, value)
+				+ mapper.apply(value).map(" => "::concat).orElse("")));
 	}
 }

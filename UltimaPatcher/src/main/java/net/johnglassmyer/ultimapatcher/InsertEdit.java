@@ -14,15 +14,27 @@ class InsertEdit implements Edit {
 
 		HackProto.InsertEdit insert = protoEdit.getInsert();
 
-		return Optional.of(new InsertEdit(insert.getStart(), insert.getLength()));
+		return Optional.of(new InsertEdit(
+				Optional.empty(), insert.getStart(), insert.getLength()));
 	}
 
+	private final Optional<String> explanation;
 	private final int start;
 	private final int length;
 
-	InsertEdit(int positionInFile, int length) {
-		this.start = positionInFile;
+	private InsertEdit(Optional<String> explanation, int start, int length) {
+		this.explanation = explanation;
+		this.start = start;
 		this.length = length;
+	}
+
+	InsertEdit(String explanation, int start, int length) {
+		this(Optional.of(explanation), start, length);
+	}
+
+	@Override
+	public Optional<String> explanation() {
+		return explanation;
 	}
 
 	@Override

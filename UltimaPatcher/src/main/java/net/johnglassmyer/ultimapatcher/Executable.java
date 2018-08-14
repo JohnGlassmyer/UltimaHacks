@@ -38,8 +38,9 @@ class Executable {
 		int fbovHeaderEnd = mzHeader.calculateMzFileSize() + FbovHeader.LENGTH;
 
 		List<Segment> segments = new ArrayList<>();
-		for (int i = 0; i < fbovHeader.segmentCount; i++) {
-			int entryStart = fbovHeader.segmentTableStartInFile + i * SegmentTableEntry.LENGTH;
+		for (int segmentIndex = 0; segmentIndex < fbovHeader.segmentCount; segmentIndex++) {
+			int entryStart = fbovHeader.segmentTableStartInFile
+					+ segmentIndex * SegmentTableEntry.LENGTH;
 			SegmentTableEntry segmentTableEntry = SegmentTableEntry.create(
 					Util.read(file, entryStart, SegmentTableEntry.LENGTH));
 
@@ -56,7 +57,7 @@ class Executable {
 				int tableStartInFile = overlayStartInFile + stub.codeSize;
 				byte[] tableBytes = Util.read(file, tableStartInFile, stub.relocationTableLength);
 				OverlayRelocationTable table = OverlayRelocationTable.create(
-						segmentStartInFile, tableStartInFile, tableBytes);
+						segmentStartInFile, tableStartInFile, tableBytes, segmentIndex);
 
 				optionalOverlay = Optional.of(new Overlay(stub, overlayStartInFile, table));
 			} else {
@@ -301,7 +302,8 @@ class Executable {
 			ByteBuffer buffer = Util.littleEndianBytes(4);
 			int newOverlayByteCount = fbovHeader.overlayByteCount + newOverlayLength;
 			buffer.putInt(newOverlayByteCount);
-			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
+			edits.add(new OverwriteEdit(
+					"overlay code size in FBOV header", editStartInFile, buffer.array()));
 		}
 		{
 			/**
@@ -313,7 +315,8 @@ class Executable {
 			ByteBuffer buffer = Util.littleEndianBytes(2);
 			int newStubEndOffset = stubSegment.tableEntry.endOffset + addedProcCount * StubProc.LENGTH;
 			buffer.putShort((short) newStubEndOffset);
-			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
+			edits.add(new OverwriteEdit(
+					"length of stub " + segmentIndex, editStartInFile, buffer.array()));
 		}
 		{
 			/**
@@ -331,18 +334,21 @@ class Executable {
 			buffer.putShort((short) (newCodeLength));
 			buffer.putShort((short) (stub.relocationTableLength));
 			buffer.putShort((short) (stub.procs.size() + addedProcCount));
-			edits.add(new OverwriteEdit(editStartInFile, buffer.array()));
+			edits.add(new OverwriteEdit(
+					"overlay metadata in stub " + segmentIndex, editStartInFile, buffer.array()));
 		}
 		{
 			/**
 			 * edits to stub: add 5-byte entry for each new proc
 			 */
 			for (int iProc = 0; iProc < procStartsInOverlay.size(); iProc++) {
+				int procIndex = stub.procs.size() + iProc;
 				int editStartInFile = stubSegment.startInFile
 						+ OverlayStub.HEADER_LENGTH
-						+ (stub.procs.size() + iProc) * StubProc.LENGTH;
+						+ procIndex * StubProc.LENGTH;
 				byte[] bytes = StubProc.bytesFor(procStartsInOverlay.get(iProc));
-				edits.add(new OverwriteEdit(editStartInFile, bytes));
+				edits.add(new OverwriteEdit(
+						"proc " + procIndex + " in stub " + segmentIndex, editStartInFile, bytes));
 			}
 		}
 		{
@@ -360,23 +366,30 @@ class Executable {
 			} else {
 				additionalFileLength = newOverlayLength;
 			}
-			edits.add(new InsertEdit(fileLength, additionalFileLength));
+			edits.add(new InsertEdit(
+					"lengthen file", fileLength, additionalFileLength));
 
 			if (!wasAlreadyLastOverlay) {
 				edits.add(new CopyEdit(
-						overlay.startInFile, stub.codeSize, newOverlayCodeStart));
+						String.format("overlay %d to end of file", segmentIndex),
+						overlay.startInFile,
+						stub.codeSize,
+						newOverlayCodeStart));
 			}
 
 			edits.add(new CopyEdit(
+					String.format("relocation table of overlay %d", segmentIndex),
 					overlay.startInFile + stub.codeSize,
 					stub.relocationTableLength,
 					newOverlayCodeStart + newCodeLength));
 
 			for (int procStartInOverlay : procStartsInOverlay) {
 				int procStartInFile = newOverlayCodeStart + procStartInOverlay;
-				edits.add(new OverwriteEdit(procStartInFile, new byte[] {
-						(byte) 0xCB
-				}));
+				edits.add(new OverwriteEdit(
+						"RETF at proc start "
+								+ Util.formatAddress(segmentIndex, procStartInOverlay),
+						procStartInFile,
+						new byte[] { (byte) 0xCB }));
 			}
 		}
 		{
