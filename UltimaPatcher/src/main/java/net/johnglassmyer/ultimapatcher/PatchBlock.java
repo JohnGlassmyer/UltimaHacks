@@ -33,7 +33,7 @@ class PatchBlock {
 	}
 
 	void logInfo(boolean includeCodeBytes) {
-		L.info(String.format("block for %d:0x%04X of length 0x%X having %d relocation site(s)",
+		L.info(String.format("  block for %d:0x%04X of length 0x%X with %d relocation site(s)",
 				segmentIndex, startOffset, codeBytes.length, relocationsWithinBlock.size()));
 
 		if (includeCodeBytes) {
