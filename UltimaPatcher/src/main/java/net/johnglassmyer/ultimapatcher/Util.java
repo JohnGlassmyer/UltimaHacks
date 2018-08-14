@@ -43,10 +43,6 @@ class Util {
 		}
 	}
 
-	@Deprecated
-	static final String TODO_USE_FOREACHWITHINDEX =
-			"TODO: once Guava has Streams.forEachWithIndex, use it instead of Streams.mapWithIndex";
-
 	static ByteBuffer littleEndianBytes(int byteCount) {
 		ByteBuffer buffer = ByteBuffer.wrap(new byte[byteCount]);
 		buffer.order(LITTLE_ENDIAN);

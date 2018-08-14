@@ -14,8 +14,6 @@ import java.util.TreeSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.collect.Streams;
-
 import net.johnglassmyer.ultimapatcher.Segment.Patchable;
 
 class Executable {
@@ -203,7 +201,8 @@ class Executable {
 			L.info(String.format("0x%06X (0x%06X in load module)", relocationInFile, relocation));
 		}
 
-		Streams.mapWithIndex(segments.stream(), (segment, segmentIndex) -> {
+		range(0, segments.size()).forEach(segmentIndex -> {
+			Segment segment = segments.get(segmentIndex);
 			segment.optionalOverlay.ifPresent(overlay -> {
 				for (int relocationOffset : overlay.relocationTable.originalAddresses) {
 					int relocationInFile = overlay.startInFile + relocationOffset;
@@ -211,8 +210,6 @@ class Executable {
 							relocationInFile, relocationOffset, segmentIndex));
 				}
 			});
-
-			return Util.TODO_USE_FOREACHWITHINDEX;
 		});
 	}
 
