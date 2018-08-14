@@ -4,10 +4,10 @@
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure: trainSkill
 		
-	startBlockAt off_eop_trainSkill
+	startBlockAt addr_eop_trainSkill
 		push bp
 		mov bp, sp
 		
@@ -25,7 +25,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push di
 		
 		; si -> skill value
-			mov si, [dseg_avatarData_pn]
+			mov si, [dseg_pn_avatarData]
 			add si, [bp+arg_skillNumber]
 			add si, 0x21
 			
@@ -51,6 +51,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			jz endProc
 			
 		reportIncrease:
+			; TODO: use db strings
+			
 			; string color: narration (black)
 				mov word [bp+var_messageString+0], '\2'
 				mov byte [bp+var_messageString+2], 0

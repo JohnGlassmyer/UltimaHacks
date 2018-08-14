@@ -1,16 +1,18 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+%endif
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		dispatch table for eop procs
 		
-	startBlockAt off_eop_dispatchTable
+	startBlockAt addr_eop_dispatchTable
 		%assign eopNumber 0
 		%rep nextEopNumber
-			dw off_eop_%[eopNumber] - off_eop_segmentZero
+			dw off_eop_%[eopNumber]
 			
 			%assign eopNumber eopNumber + 1
 		%endrep

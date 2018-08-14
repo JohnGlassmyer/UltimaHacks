@@ -1,16 +1,18 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+%endif
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		initialize repurposed bytes in dseg
 		
 	; zeroBytesInDseg numberOfBytes, dsegOffset
 	%macro zeroBytesInDseg 2
-		startBlockAt off_dseg_segmentZero + %2
+		startBlockAt seg_dseg, %2
 			times %1 db 0
-		endBlockAt startAbsolute + %1
+		endBlockOfLength %1
 	%endmacro
 	
 	zeroBytesInDseg 1, dseg_isMouseLookEnabled
@@ -23,23 +25,23 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 	zeroBytesInDseg 4, dseg_lastKeyBindingTime
 	zeroBytesInDseg 2, dseg_haveWarnedAboutDrawQueueLimit
 	
-	startBlockAt off_dseg_segmentZero + dseg_newlineString
+	startBlockAt seg_dseg, dseg_newlineString
 		db `\n`, 0
-	endBlockAt startAbsolute + 2
+	endBlock
 	
-	startBlockAt off_dseg_segmentZero + dseg_trigScale
+	startBlockAt seg_dseg, dseg_trigScale
 		; magnitude of 16-bit values
 		; pi, as an angle; maximum magnitude of cos and sin values
 		dd 0x8000
-	endBlockAt startAbsolute + 4
+	endBlock
 	
-	startBlockAt off_dseg_segmentZero + dseg_radianAngle
+	startBlockAt seg_dseg, dseg_radianAngle
 		; 0x8000 / pi
 		dd 0x28BE
-	endBlockAt startAbsolute + 4
+	endBlock
 	
-	startBlockAt off_dseg_segmentZero + dseg_autoAttackType
+	startBlockAt seg_dseg, dseg_autoAttackType
 		; 6 == slash attack-type
 		db 6
-	endBlockAt startAbsolute + 1
+	endBlock
 endPatch

@@ -4,30 +4,30 @@
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		call eop enqueueGridCoords to flip drawing of geometry behind player 
 		
-	%macro callEopEnqueueGridCoordsAt 1
-		startBlockAt %1
+	%macro callEopEnqueueGridCoordsAt 2
+		startBlockAt %1, %2
 			callFromLoadModule byCallSiteEopDispatcher
-		endBlockWithFillAt nop, startAbsolute + 5
+		endBlockOfLength 5
 	%endmacro
 	
 	; 16 calls to enqueueGridCoords in enqueueDrawBlock
-	callEopEnqueueGridCoordsAt 0x2207E
-	callEopEnqueueGridCoordsAt 0x2209F
-	callEopEnqueueGridCoordsAt 0x220BE
-	callEopEnqueueGridCoordsAt 0x220DA
-	callEopEnqueueGridCoordsAt 0x2211C
-	callEopEnqueueGridCoordsAt 0x22133
-	callEopEnqueueGridCoordsAt 0x2214C
-	callEopEnqueueGridCoordsAt 0x22163
-	callEopEnqueueGridCoordsAt 0x22318
-	callEopEnqueueGridCoordsAt 0x22335
-	callEopEnqueueGridCoordsAt 0x2235E
-	callEopEnqueueGridCoordsAt 0x22386
-	callEopEnqueueGridCoordsAt 0x22444
-	callEopEnqueueGridCoordsAt 0x22462
-	callEopEnqueueGridCoordsAt 0x22482
-	callEopEnqueueGridCoordsAt 0x224A1
+	callEopEnqueueGridCoordsAt 19, 0x0F7E
+	callEopEnqueueGridCoordsAt 19, 0x0F9F
+	callEopEnqueueGridCoordsAt 19, 0x0FBE
+	callEopEnqueueGridCoordsAt 19, 0x0FDA
+	callEopEnqueueGridCoordsAt 19, 0x101C
+	callEopEnqueueGridCoordsAt 19, 0x1033
+	callEopEnqueueGridCoordsAt 19, 0x104C
+	callEopEnqueueGridCoordsAt 19, 0x1063
+	callEopEnqueueGridCoordsAt 19, 0x1218
+	callEopEnqueueGridCoordsAt 19, 0x1235
+	callEopEnqueueGridCoordsAt 19, 0x125E
+	callEopEnqueueGridCoordsAt 19, 0x1286
+	callEopEnqueueGridCoordsAt 19, 0x1344
+	callEopEnqueueGridCoordsAt 19, 0x1362
+	callEopEnqueueGridCoordsAt 19, 0x1382
+	callEopEnqueueGridCoordsAt 19, 0x13A1
 endPatch

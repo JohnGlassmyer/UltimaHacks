@@ -1,15 +1,17 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	
+	defineAddress 138, 0x08F8, haveSelectedOption
+	defineAddress 138, 0x0909, nextInput
+%endif
 
 [bits 16]
 
-%define off_haveSelectedOption 0x801B8
-%define off_nextInput          0x801C9
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		wrap navigation of main-menu options from end to start and vice-versa
 		
-	startBlockAt off_haveSelectedOption
+	startBlockAt addr_haveSelectedOption
 		; si == selected option index
 		; di == number of options
 		

@@ -1,19 +1,21 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/additionalCharacterCodes.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/additionalCharacterCodes.asm"
+	
+	defineAddress 72, 0x0010, asciiForScancodeTable
+%endif
 
 [bits 16]
 
-off_asciiForScancodeTable EQU 0x59450
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		add character codes for Shift / Ctrl / Alt keys
 		
 	; insertCharacterMapping scancode, character
 	%macro insertCharacterMapping 2
-		startBlockAt off_asciiForScancodeTable + %1
+		startBlockAt addr_asciiForScancodeTable + %1
 			db %2
-		endBlockAt startAbsolute + 1
+		endBlockOfLength 1
 	%endmacro
 	
 	%assign i 0

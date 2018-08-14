@@ -1,13 +1,15 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+%endif
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure: toggleMouseLook
 		
-	startBlockAt off_eop_toggleMouseLook
+	startBlockAt addr_eop_toggleMouseLook
 		push bp
 		mov bp, sp
 		

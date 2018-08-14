@@ -4,10 +4,10 @@
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure: mapControl
 		
-	startBlockAt off_eop_mapControl
+	startBlockAt addr_eop_mapControl
 		push bp
 		mov bp, sp
 		

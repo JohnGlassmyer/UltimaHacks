@@ -1,13 +1,15 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+%endif
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure: slidePanel
 		
-	startBlockAt off_eop_slidePanel
+	startBlockAt addr_eop_slidePanel
 		push bp
 		mov bp, sp
 		

@@ -1,14 +1,16 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+%endif
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		scale the speed at which the player turns
 		
-	startBlockAt off_dseg_segmentZero + dseg_rotationSpeedBase
+	startBlockAt seg_dseg, dseg_rotationSpeedBase
 		; player rotation (yaw) speed is proportional to this value
 		; original is 15
 		dw 15
-	endBlockAt startAbsolute + 2
+	endBlock
 endPatch

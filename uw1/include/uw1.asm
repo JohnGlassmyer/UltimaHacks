@@ -5,25 +5,18 @@
 ; github.com/JohnGlassmyer/UltimaHacks
 
 ; assuming that overlay 117 was expanded and moved to the end of the executable:
-; java -jar UltimaPatcher.jar --exe=UW2.EXE \
-;     --expand_overlay_index=117 --expand_overlay_length=0x2400
+; java -jar UltimaPatcher.jar --exe=UW.EXE --expand-overlay=117:0x2200 (...)
 
 ; =============================================================================
 ; length of executable to be patched, and of expanded overlay
 ; -----------------------------------------------------------------------------
 ; assuming that the expanded overlay has been moved to the end of the file
 
-ORIGINAL_EXE_LENGTH                     EQU 0x859B0
-EXPANDED_OVERLAY_LENGTH                 EQU 0x2400
-EXPANDED_OVERLAY_EXE_LENGTH             EQU \
-        ORIGINAL_EXE_LENGTH + EXPANDED_OVERLAY_LENGTH
-ORIGINAL_EOP_LENGTH                     EQU 0x108F
+%assign ORIGINAL_EXE_LENGTH                     0x859B0
+%assign EXPANDED_OVERLAY_LENGTH                 0x2200
+%assign ORIGINAL_EOP_LENGTH                     0x108F
 
-; =============================================================================
-; absolute offsets in the executable file
-; -----------------------------------------------------------------------------
-
-off_dseg_segmentZero                    EQU 0x5DCC0
+%assign EXE_LENGTH (ORIGINAL_EXE_LENGTH + EXPANDED_OVERLAY_LENGTH)
 
 ; =============================================================================
 ; data-segment offsets
@@ -99,94 +92,128 @@ dseg_ps_drawQueueEnd                    EQU 0x7452
 ; procedure far-call addresses
 ; -----------------------------------------------------------------------------
 
-defineProc 0x0028, 0x0EC5, 0x1DFF, signedWordToString
-defineProc 0x0028, 0x0EC5, 0x1E26, unsignedDwordToString
-defineProc 0x0028, 0x0EC5, 0x290A, strcat
+defineSegment 4, 0x0020, 0x06E7
 
-defineProc 0x0058, 0x1A6F, 0x0083, bindMouse
-defineProc 0x0058, 0x1A6F, 0x0105, bindKey
-defineProc 0x0058, 0x1A6F, 0x02B1, tryKeyAndMouseBindings
+defineSegment 5, 0x0028, 0x0EC5
+defineAddress 5, 0x1DFF, signedWordToString
+defineAddress 5, 0x1E26, unsignedDwordToString
+defineAddress 5, 0x290A, strcat
 
-defineProc 0x0060, 0x1AB6, 0x00AF, setInterfaceRoutineBit
+defineSegment 9, 0x0048, 0x193D
 
-defineProc 0x0070, 0x1ADC, 0x0075, eraseCursorIfVisible
-defineProc 0x0070, 0x1ADC, 0x0802, setCursorImage
-defineProc 0x0070, 0x1ADC, 0x0868, updateCursorRegion
-defineProc 0x0070, 0x1ADC, 0x0BE8, savePixelsAroundCursor
-defineProc 0x0070, 0x1ADC, 0x0CF2, drawCursor
-defineProc 0x0070, 0x1ADC, 0x0E29, moveCursor
+defineSegment 11, 0x0058, 0x1A6F
+defineAddress 11, 0x0083, bindMouse
+defineAddress 11, 0x0105, bindKey
+defineAddress 11, 0x02B1, tryKeyAndMouseBindings
 
-defineProc 0x0078, 0x1BD8, 0x0B1B, playSoundEffect
+defineSegment 12, 0x0060, 0x1AB6
+defineAddress 12, 0x00AF, setInterfaceRoutineBit
 
-defineProc 0x0098, 0x1DF0, 0x0001, enqueueGridCoords
-defineProc 0x0098, 0x1DF0, 0x00C5, enqueueDrawWithinLimits
-defineProc 0x0098, 0x1DF0, 0x0DBC, enqueueDrawBlock
+defineSegment 14, 0x0070, 0x1ADC
+defineAddress 14, 0x0075, eraseCursorIfVisible
+defineAddress 14, 0x0802, setCursorImage
+defineAddress 14, 0x0868, updateCursorRegion
+defineAddress 14, 0x0BE8, savePixelsAroundCursor
+defineAddress 14, 0x0CF2, drawCursor
+defineAddress 14, 0x0E29, moveCursor
 
-defineProc 0x00A8, 0x1F3A, 0x0EAE, sinAndCosInterpolated
+defineSegment 15, 0x0078, 0x1BD8
+defineAddress 15, 0x0B1B, playSoundEffect
 
-defineProc 0x00C8, 0x2121, 0x11BA, attack
+defineSegment 19, 0x0098, 0x1DF0
+defineAddress 19, 0x0001, enqueueGridCoords
+defineAddress 19, 0x00C5, enqueueDrawWithinLimits
+defineAddress 19, 0x0DBC, enqueueDrawBlock
 
-defineProc 0x00D8, 0x22EF, 0x000F, flipCharPanel
-defineProc 0x00D8, 0x22EF, 0x0032, clickCompass
-defineProc 0x00D8, 0x22EF, 0x010F, clickFlasks
-defineProc 0x00D8, 0x22EF, 0x08CA, findItemAtCursor
-defineProc 0x00D8, 0x22EF, 0x09D0, describeClickedTerrain
-defineProc 0x00D8, 0x22EF, 0x0CEC, talkModeProc
-defineProc 0x00D8, 0x22EF, 0x0D20, lookModeProc
-defineProc 0x00D8, 0x22EF, 0x0E3F, useModeProc
-defineProc 0x00D8, 0x22EF, 0x13D5, activateMode
+defineSegment 21, 0x00A8, 0x1F3A
+defineAddress 21, 0x0EAE, sinAndCosInterpolated
 
-defineProc 0x00F0, 0x2674, 0x0A52, isItemCharacter
+defineSegment 25, 0x00C8, 0x2121
+defineAddress 25, 0x11BA, attack
 
-defineProc 0x0110, 0x2ABA, 0x0246, clearDrawQueue
-defineProc 0x0110, 0x2ABA, 0x0396, setupPerspective
-defineProc 0x0110, 0x2ABA, 0x05B4, setupViewLimits
-defineProc 0x0110, 0x2ABA, 0x115E, applyViewLimits
+defineSegment 27, 0x00D8, 0x22EF
+defineAddress 27, 0x000F, flipCharPanel
+defineAddress 27, 0x0032, clickCompass
+defineAddress 27, 0x010F, clickFlasks
+defineAddress 27, 0x08CA, findItemAtCursor
+defineAddress 27, 0x09D0, describeClickedTerrain
+defineAddress 27, 0x0CEC, talkModeProc
+defineAddress 27, 0x0D20, lookModeProc
+defineAddress 27, 0x0E3F, useModeProc
+defineAddress 27, 0x13D5, activateMode
 
-defineProc 0x0128, 0x2D9C, 0x004E, move
-defineProc 0x0128, 0x2D9C, 0x0334, easyMove
+defineSegment 30, 0x00F0, 0x2674
+defineAddress 30, 0x0A52, isItemCharacter
 
-defineProc 0x0138, 0x2E9A, 0x03DF, setPanelState
-defineProc 0x0138, 0x2E9A, 0x11B3, animateSlidingPanel
-defineProc 0x0138, 0x2E9A, 0x1AD5, slidePanel
+defineSegment 34, 0x0110, 0x2ABA
+defineAddress 34, 0x0246, clearDrawQueue
+defineAddress 34, 0x0396, setupPerspective
+defineAddress 34, 0x05B4, setupViewLimits
+defineAddress 34, 0x115E, applyViewLimits
 
-defineProc 0x0150, 0x32A8, 0x008D, getExternalizedString
-defineProc 0x0150, 0x32A8, 0x090E, strcat_far
+defineSegment 36, 0x0120, 0x2D02
+defineAddress 36, 0x043B, enqueueDrawItems
 
-defineProc 0x0170, 0x3603, 0x02EA, printStringToScroll
+defineSegment 37, 0x0128, 0x2D9C
+defineAddress 37, 0x004E, move
+defineAddress 37, 0x0334, easyMove
 
-; load-module segments < 0x5950 <= overlay segments
+defineSegment 39, 0x0138, 0x2E9A
+defineAddress 39, 0x03DF, setPanelState
+defineAddress 39, 0x11B3, animateSlidingPanel
+defineAddress 39, 0x1AD5, slidePanel
 
-defineProc 0x02E0, 0x595C, 0x007A, changeMapLevel
+defineSegment 42, 0x0150, 0x32A8
+defineAddress 42, 0x008D, getExternalizedString
+defineAddress 42, 0x090E, strcat_far
 
-defineProc 0x02F8, 0x597E, 0x0070, clickOtherTrade
-defineProc 0x02F8, 0x597E, 0x0084, clickAvatarTrade
+defineSegment 46, 0x0170, 0x3603
+defineAddress 46, 0x02EA, printStringToScroll
 
-defineProc 0x0320, 0x599C, 0x003E, ark_say
-defineProc 0x0320, 0x599C, 0x0075, selectConversationOption
+defineSegment 72, 0x0240, 0x5624
 
-defineProc 0x0368, 0x59D3, 0x0048, transitionToInterfaceMode
+defineSegment 92, 0x02E0, 0x595C
+defineAddress 92, 0x007A, changeMapLevel
 
-defineProc 0x03A8, 0x59FE, 0x0020, scrollInventoryDown
-defineProc 0x03A8, 0x59FE, 0x002F, closeInventoryContainer
-defineProc 0x03A8, 0x59FE, 0x0043, scrollInventoryUp
-; eop dispatchers, inserted after the last proc in the expanded overlay
-defineProc 0x03A8, 0x59FE, 0x005C+1*5, varArgsEopDispatcher
-defineProc 0x03A8, 0x59FE, 0x005C+2*5, byteArgEopDispatcher
-defineProc 0x03A8, 0x59FE, 0x005C+3*5, byCallSiteEopDispatcher
+defineSegment 95, 0x02F8, 0x597E
+defineAddress 95, 0x0070, clickOtherTrade
+defineAddress 95, 0x0084, clickAvatarTrade
 
-defineProc 0x03B8, 0x5A0B, 0x0020, tryToCast
-defineProc 0x03B8, 0x5A0B, 0x0034, clickRunePanel
+defineSegment 100, 0x0320, 0x599C
+defineAddress 100, 0x003E, ark_say
+defineAddress 100, 0x0075, selectConversationOption
 
-defineProc 0x0410, 0x5A3D, 0x007F, handleControlKey
+defineSegment 109, 0x0368, 0x59D3
+defineAddress 109, 0x0048, transitionToInterfaceMode
 
-defineProc 0x0430, 0x5A53, 0x0052, adjustPitch
-defineProc 0x0430, 0x5A53, 0x0061, printVersion
-defineProc 0x0430, 0x5A53, 0x0066, printDebug
+defineSegment 117, 0x03A8, 0x59FE, eop
+defineAddress 117, 0x0020, scrollInventoryDown
+defineAddress 117, 0x002F, closeInventoryContainer
+defineAddress 117, 0x0043, scrollInventoryUp
+defineAddress 117, 0x005C+1*5, varArgsEopDispatcher
+defineAddress 117, 0x005C+2*5, byteArgEopDispatcher
+defineAddress 117, 0x005C+3*5, byCallSiteEopDispatcher
 
-defineProc 0x0478, 0x5A76, 0x008E, sleep
-defineProc 0x0478, 0x5A76, 0x0093, track
-defineProc 0x0478, 0x5A76, 0x0070, trainSkill
+defineSegment 119, 0x03B8, 0x5A0B
+defineAddress 119, 0x0020, tryToCast
+defineAddress 119, 0x0034, clickRunePanel
+
+defineSegment 130, 0x0410, 0x5A3D
+defineAddress 130, 0x007F, handleControlKey
+
+defineSegment 134, 0x0430, 0x5A53
+defineAddress 134, 0x0052, adjustPitch
+defineAddress 134, 0x0061, printVersion
+defineAddress 134, 0x0066, printDebug
+
+defineSegment 138, 0x0450, 0x5A61
+
+defineSegment 143, 0x0478, 0x5A76
+defineAddress 143, 0x008E, sleep
+defineAddress 143, 0x0093, track
+defineAddress 143, 0x0070, trainSkill
+
+defineSegment 155, 0x04D8, 0x5AAC, dseg
 
 ; =============================================================================
 ; structure offsets

@@ -1,5 +1,13 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+
+	defineAddress 37, 0x01E6, considerShiftStates
+	defineAddress 37, 0x022E, beginMovementKeyLoop
+	defineAddress 37, 0x024E, interpretScancode
+	defineAddress 37, 0x0328, nextMovementKey
+	defineAddress 37, 0x0331, endOfProc
+%endif
 
 [bits 16]
 
@@ -34,18 +42,10 @@ MovementType_SLIDE_RIGHT                EQU 0x0A
 MovementType_FLY_UP                     EQU 0x0C
 MovementType_FLY_DOWN                   EQU 0x0D
 
-%define off_considerShiftStates  0x30DA6
-%define off_beginMovementKeyLoop 0x30DEE
-%define off_interpretScancode    0x30E0E
-%define off_nextMovementKey      0x30EE8
-%define off_endOfProc            0x30EF1
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		customize movement keys
 		
-	off_movementScancodesArray EQU \
-		off_dseg_segmentZero + dseg_movementScancodesArray
-	startBlockAt off_movementScancodesArray
+	startBlockAt seg_dseg, dseg_movementScancodesArray
 		db MovementScancode_FLY_DOWN
 		db MovementScancode_RUN_FORWARD
 		db MovementScancode_FLY_UP
@@ -55,9 +55,9 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		db MovementScancode_SLIDE_LEFT
 		db MovementScancode_BACKWARDS
 		db MovementScancode_SLIDE_RIGHT
-	endBlockAt off_movementScancodesArray + 9
+	endBlockOfLength 9
 	
-	startBlockAt off_considerShiftStates
+	startBlockAt addr_considerShiftStates
 		; original would skip applying movement keys if any of Shift, Capslock,
 		; Alt, or Ctrl were held.
 		
@@ -83,7 +83,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		ctrlAltNotHeld:
 	endBlockAt off_beginMovementKeyLoop
 	
-	startBlockAt off_interpretScancode
+	startBlockAt addr_interpretScancode
 		; ax == one of the 9 elements of movementScancodesArray
 		
 		mov bl, 0

@@ -1,13 +1,15 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+%endif
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure byte-arg dispatcher
 		
-	startBlockAt off_eop_byteArgDispatcher
+	startBlockAt addr_eop_byteArgDispatcher
 		push bp
 		mov bp, sp
 		
@@ -27,7 +29,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		; lookup procedure offset
 			movzx bx, byte [bp+arg_byteArgEopArg+1]
 			shl bx, 1
-			add bx, off_eop_dispatchTable - off_eop_segmentZero
+			add bx, off_eop_dispatchTable
 			mov bx, [cs:bx]
 			
 		call bx

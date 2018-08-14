@@ -1,16 +1,18 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+
+	defineAddress 109, 0x02C4, setInterfaceMode_proc
+	defineAddress 109, 0x02FF, setInterfaceMode_endp
+%endif
 
 [bits 16]
 
-%define off_setInterfaceMode_proc 0x74F34
-%define off_setInterfaceMode_endp 0x74F6F
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		call eop-setInterfaceMode to disable mouseLook in conversations
 		
-	startBlockAt off_setInterfaceMode_proc
+	startBlockAt addr_setInterfaceMode_proc
 		push bp
 		mov bp, sp
 		

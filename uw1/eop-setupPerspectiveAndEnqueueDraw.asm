@@ -1,17 +1,15 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+%endif
 
 [bits 16]
 
-; segment of enqueueDrawItemsInBlock (base 0x2D02 / 0x0120)
-%define os_enqueueDrawItems 0x0120
-%define oo_enqueueDrawItems 0x043B
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure: setupPerspectiveAndEnqueueDraw
 		
-	startBlockAt off_eop_setupPerspectiveAndEnqueueDraw
+	startBlockAt addr_eop_setupPerspectiveAndEnqueueDraw
 		push bp
 		mov bp, sp
 		
@@ -55,19 +53,19 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			call cullRearwardBlocks
 			
 			; si := relocated base of segment
-				pushWithRelocation os_enqueueDrawItems
+				pushWithRelocation segmentFromOverlay_enqueueDrawItems
 				pop si
 				
 			; disable enqueueDrawItemsInBlock to prevent drawing
 			; (non-terrain) items in rearward blocks
 				mov es, si
-				mov byte [es:oo_enqueueDrawItems], 0xCB ; <retf> instruction
+				mov byte [es:off_enqueueDrawItems], 0xCB ; <retf>
 				
 			callFromOverlay enqueueDrawWithinLimits
 			
 			; re-enable enqueueDrawItemsInBlock
 				mov es, si
-				mov byte [es:oo_enqueueDrawItems], 0x55 ; <push bp> instruction
+				mov byte [es:off_enqueueDrawItems], 0x55 ; <push bp>
 				
 			; flip back around to original player heading
 				add word [dseg_heading], 0x8000
@@ -234,16 +232,16 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 						
 					cfb_calculateLeftmostColumn:
 						; leftmost column = ((row + 1) * sin / cos) - 1
-    						mov ax, si
-    						inc ax
-    						cwd
-    						mov cx, [bp+var_leftCullAngleSin]
-    						imul cx
-    						mov cx, [bp+var_leftCullAngleCos]
-    						idiv cx
-    						dec ax
-    						mov di, ax
-    						
+							mov ax, si
+							inc ax
+							cwd
+							mov cx, [bp+var_leftCullAngleSin]
+							imul cx
+							mov cx, [bp+var_leftCullAngleCos]
+							idiv cx
+							dec ax
+							mov di, ax
+							
 						cmp di, -16
 						jge cfb_haveLeftmostColumn
 						mov di, -16
@@ -261,16 +259,16 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 						
 					cfb_calculateRightmostColumn:
 						; rightmost column = ((row + 1) * sin / cos) + 1
-    						mov ax, si
-    						inc ax
-    						cwd
-    						mov cx, [bp+var_rightCullAngleSin]
-    						imul cx
-    						mov cx, [bp+var_rightCullAngleCos]
-    						idiv cx
-    						inc ax
-    						mov di, ax
-    						
+							mov ax, si
+							inc ax
+							cwd
+							mov cx, [bp+var_rightCullAngleSin]
+							imul cx
+							mov cx, [bp+var_rightCullAngleCos]
+							idiv cx
+							inc ax
+							mov di, ax
+							
 						cmp di, 16
 						jle cfb_haveRightmostColumn
 						mov di, 16

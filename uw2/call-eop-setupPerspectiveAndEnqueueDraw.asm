@@ -2,20 +2,9 @@
 %include "include/uw2.asm"
 %include "include/uw2-eop.asm"
 
-[bits 16]
+defineAddress 34, 0x0300, beforeSetupA  
+defineAddress 34, 0x030E, afterEnqueueA  
+defineAddress 34, 0x036A, beforeSetupB  
+defineAddress 34, 0x037C, afterEnqueueB  
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
-		call eop setupPerspectiveAndEnqueueDraw to draw blocks behind player
-		
-	startBlockAt 0x2F9E0
-		push varArgsEopArg(setupPerspectiveAndEnqueueDraw, 0)
-		callFromLoadModule varArgsEopDispatcher
-		add sp, 2
-	endBlockWithFillAt nop, 0x2F9EE
-	
-	startBlockAt 0x2FA4A
-		push varArgsEopArg(setupPerspectiveAndEnqueueDraw, 0)
-		callFromLoadModule varArgsEopDispatcher
-		add sp, 2
-	endBlockWithFillAt nop, 0x2FA5C
-endPatch
+%include "../uw1/call-eop-setupPerspectiveAndEnqueueDraw.asm"

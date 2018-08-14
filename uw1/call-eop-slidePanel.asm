@@ -1,15 +1,17 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+
+	defineAddress 39, 0x11E8, animateSlidingPanel
+%endif
 
 [bits 16]
 
-%define off_animateSlidingPanel 0x32D88
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		call eop slidePanel to slide panel more rapidly
 		
-	startBlockAt off_animateSlidingPanel
+	startBlockAt addr_animateSlidingPanel
 		callFromLoadModule byCallSiteEopDispatcher
-	endBlockAt startAbsolute + 5
+	endBlockOfLength 5
 endPatch

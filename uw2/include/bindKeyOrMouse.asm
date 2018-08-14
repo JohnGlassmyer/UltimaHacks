@@ -1,8 +1,8 @@
 ; bindKey mode, keyCode, procName, arg
 %macro bindKey 4
 	; using "from overlay" segment because binds are executed from an overlay
-    pushWithRelocation procSegmentFromOverlay_%[%3] ; codeSeg
-    push procOffset_%[%3] ; codeOff
+    pushWithRelocation segmentFromOverlay_%[%3] ; codeSeg
+    push off_%[%3] ; codeOff
     push %1 ; mode
     push %4 ; arg
     push %2 ; keyCode
@@ -13,8 +13,8 @@
 ; bindMouse mode, minX, minY, maxX, maxY, procName, arg
 ; NB mouse Y is measured from the bottom of the screen up
 %macro bindMouse 7
-    pushWithRelocation procSegmentFromOverlay_%[%6] ; codeSeg
-    push procOffset_%[%6] ; codeOff
+    pushWithRelocation segmentFromOverlay_%[%6] ; codeSeg
+    push off_%[%6] ; codeOff
     push %1 ; mode
     push %7 ; arg
     push %5 ; maxY

@@ -1,12 +1,7 @@
 %include "../UltimaPatcher.asm"
 %include "include/uw2.asm"
 
-[bits 16]
+defineAddress 9, 0x0E91, maybeJumpOverAdjustment
+defineAddress 9, 0x0EDF, afterAdjustment
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
-		dont change player heading when player has moved against an obstacle
-		
-	startBlockAt 0x1CC51
-		jmp calcJump(0x1CC9F)
-	endBlock
-endPatch
+%include "../uw1/dontFixHeading.asm"

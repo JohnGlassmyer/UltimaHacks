@@ -4,10 +4,10 @@
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure call-site-dependent dispatcher
 		
-	startBlockAt off_eop_byCallSiteDispatcher
+	startBlockAt addr_eop_byCallSiteDispatcher
 		push bp
 		mov bp, sp
 		
@@ -26,23 +26,23 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push word [bp+arg_firstArg+0]
 		
 		; enqueueDrawBlock calls enqueueGridCoords from load module
-			pushWithRelocation procSegmentFromOverlay_enqueueDrawBlock
+			pushWithRelocation segmentFromOverlay_enqueueDrawBlock
 			pop ax
 			cmp ax, [bp+____callerCs]
 			jnz notEnqueueGridCoords
 			
-			mov bx, off_eop_enqueueGridCoords - off_eop_segmentZero
+			mov bx, off_eop_enqueueGridCoords
 			jmp callEop
 			
 			notEnqueueGridCoords:
 			
 		; animateSlidingPanel calls slidePanel from load module
-			pushWithRelocation procSegmentFromOverlay_animateSlidingPanel
+			pushWithRelocation segmentFromOverlay_animateSlidingPanel
 			pop ax
 			cmp ax, [bp+____callerCs]
 			jnz notSlidePanel
 			
-			mov bx, off_eop_slidePanel - off_eop_segmentZero
+			mov bx, off_eop_slidePanel
 			jmp callEop
 			
 			notSlidePanel:
@@ -52,7 +52,7 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			cmp ax, [bp+____callerIp]
 			jnz notTrainSkill
 			
-			mov bx, off_eop_trainSkill - off_eop_segmentZero
+			mov bx, off_eop_trainSkill
 			jmp callEop
 			
 			notTrainSkill:

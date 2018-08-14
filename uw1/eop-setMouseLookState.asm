@@ -1,18 +1,19 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+
+	; locations within the moveCursor procedure
+	defineAddress 14, 0x0E56, tabJump
+	defineAddress 14, 0x0E96, shiftTabJump
+%endif
 
 [bits 16]
 
-; segment in which cursor is moved by key input (base 0x1ADC / 0x0070)
-%define os_cursorKeySegment       0x0070
-%define segCursorKey_tabJump      0x0E56
-%define segCursorKey_shiftTabJump 0x0E96
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure: setMouseLookState
 		
-	startBlockAt off_eop_setMouseLookState
+	startBlockAt addr_eop_setMouseLookState
 		push bp
 		mov bp, sp
 		
@@ -26,8 +27,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push si
 		push di
 		
-		; determine relocated base of cursorKeySegment 
-		pushWithRelocation os_cursorKeySegment
+		; determine relocated segment-base of moveCursor
+		pushWithRelocation segmentFromOverlay_tabJump
 		pop word [bp+var_segmentBase]
 		
 		cmp word [bp+arg_newMouseLookState], 0
@@ -38,8 +39,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			
 			; disable Tab and Shift+Tab cursor-movement keys
 				mov es, [bp+var_segmentBase]
-				mov word [es:segCursorKey_tabJump],      0x9090 ; <nop> <nop>
-				mov word [es:segCursorKey_shiftTabJump], 0x9090 ; <nop> <nop>
+				mov word [es:off_tabJump],      0x9090 ; <nop> <nop>
+				mov word [es:off_shiftTabJump], 0x9090 ; <nop> <nop>
 				
 			; erase cursor at its current location
 				callFromOverlay eraseCursorIfVisible
@@ -90,8 +91,8 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 			
 			; re-enable Tab and Shift+Tab cursor-movement keys
 				mov es, [bp+var_segmentBase]
-				mov word [es:segCursorKey_tabJump],      0x7374 ; <jz 0x77>
-				mov word [es:segCursorKey_shiftTabJump], 0x0374 ; <jz 0x03>
+				mov word [es:off_tabJump],      0x7374 ; <jz 0x77>
+				mov word [es:off_shiftTabJump], 0x0374 ; <jz 0x03>
 				
 			; automatic redraw of 3d view will erase cursor image left there
 			

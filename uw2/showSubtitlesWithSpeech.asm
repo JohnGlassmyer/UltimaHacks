@@ -4,12 +4,14 @@
 
 [bits 16]
 
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+defineAddress 108, 0x1036, jumpOverSubtitles
+
+startPatch EXE_LENGTH, \
 		show subtitles in cut-scenes even if speech is played
 		
 	; replace a jmp over displaying subtitles with nop's
-	startBlockAt 0x809C6
+	startBlockAt addr_jumpOverSubtitles
 		nop
 		nop
-	endBlockAt startAbsolute+2
+	endBlock
 endPatch

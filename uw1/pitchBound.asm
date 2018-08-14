@@ -1,21 +1,23 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+
+	defineAddress 134, 0x0ED0, pushCrystalBallPitchBound
+	defineAddress 134, 0x0EDB, pushPlayerPitchBound
+%endif
 
 [bits 16]
 
-%define off_pushCrystalBallPitchBound 0x7F700
-%define off_pushPlayerPitchBound      0x7F70B
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		change how far up or down the player may look using keys
 		
 	; pitchBound is now defined in uw1.asm
 	
-	startBlockAt off_pushCrystalBallPitchBound
+	startBlockAt addr_pushCrystalBallPitchBound
 		push word pitchBound
-	endBlockAt startAbsolute + 3
+	endBlockOfLength 3
 	
-	startBlockAt off_pushPlayerPitchBound
+	startBlockAt addr_pushPlayerPitchBound
 		push word pitchBound
-	endBlockAt startAbsolute + 3
+	endBlockOfLength 3
 endPatch

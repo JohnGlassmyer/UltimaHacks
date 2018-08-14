@@ -1,15 +1,20 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+	
+	%assign off_drawQueueLimit 0xAFF4
+%endif
+
+; assumption: each block adds fewer than 0x300 bytes to the draw queue
+%assign off_drawQueueSafeLimit off_drawQueueLimit - 0x300
 
 [bits 16]
 
-%define drawQueueLimitOffset 0xAFF4
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		expanded overlay procedure: enqueueDrawBlock
 		
-	startBlockAt off_eop_enqueueDrawBlock
+	startBlockAt addr_eop_enqueueDrawBlock
 		push bp
 		mov bp, sp
 		
@@ -23,12 +28,9 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		push si
 		push di
 		
-		; assumption: each block adds fewer than 0x300 bytes to the draw queue
-		%assign drawQueueSafeLimit drawQueueLimitOffset - 0x300
-		
 		; skip drawing this block if doing so is likely
 		; to cause the draw queue to overflow
-			cmp word [dseg_ps_drawQueueEnd], drawQueueSafeLimit
+			cmp word [dseg_ps_drawQueueEnd], off_drawQueueSafeLimit
 			ja skipDrawing
 			
 		safeToDraw:

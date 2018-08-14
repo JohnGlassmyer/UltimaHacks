@@ -1,22 +1,24 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
-%include "include/additionalCharacterCodes.asm"
-%include "include/bindKeyOrMouse.asm"
-
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+	%include "include/additionalCharacterCodes.asm"
+	%include "include/bindKeyOrMouse.asm"
+	
+	defineAddress 134, 0x018E, bindsBegin
+	defineAddress 134, 0x06D8, bindsEnd
+%endif
+	
 [bits 16]
 
-%define off_bindsBegin 0x7E9BE
-%define off_bindsEnd   0x7EF08
+; TODO: loop over arrays of bindings, calling bindKey / bindMouse for each
 
 ; TODO: read key bindings from a configuration file
 
-; TODO: add mouse-handedness switching, like in UW2
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		customize key and mouse bindings
 		
-	startBlockAt off_bindsBegin
+	startBlockAt addr_bindsBegin
 		; TODO: find out the difference between interface modes 1 and 16
 		;   (is 17 useful, or can it be replaced with 1?)
 		
@@ -72,11 +74,6 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		; simulate clicks on health and mana flasks
 		bindKey 1, 'h', byteArgEopDispatcher, byteArgEopArg(clickFlasks, 0)
 		
-		; click arrows below the compass to move
-		bindMouse 1, 107,  33, 123,  47, easyMove, -1, ; Easy-left
-		bindMouse 1, 130,  31, 146,  44, easyMove,  0, ; Easy-walk
-		bindMouse 1, 155,  33, 170,  47, easyMove,  1, ; Easy-right
-		
 		bindKey 1, C|0xA6, easyMove,  0           ; Ctrl+Up    => Easy-walk
 		bindKey 1, C|0xAB, easyMove, -2           ; Ctrl+Down  => Easy-back
 		bindKey 1, C|0xA8, easyMove, -1           ; Ctrl+Left  => Easy-left
@@ -104,22 +101,12 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		bindKey 1, C|'r', handleControlKey, C|'r' ; restore
 		bindKey 1, C|'s', handleControlKey, C|'s' ; save
 		
-		bindKey 1, 0x85, activateMode, 0          ; F6
-		bindKey 1, 0x84, activateMode, 1          ; F5
-		bindKey 1, 0x83, activateMode, 2          ; F4
-		bindKey 1, 0x82, activateMode, 3          ; F3
-		bindKey 1, 0x81, activateMode, 4          ; F2
-		bindKey 1, 0x80, activateMode, 5          ; F1
-		
 		; in conversation
 		bindKey 4, '1', selectConversationOption, 1
 		bindKey 4, '2', selectConversationOption, 2
 		bindKey 4, '3', selectConversationOption, 3
 		bindKey 4, '4', selectConversationOption, 4
 		bindKey 4, '5', selectConversationOption, 5
-		bindMouse 4,  82, 152, 136, 190, clickOtherTrade,  4
-		bindMouse 4, 139, 152, 193, 190, clickAvatarTrade, 4
-		bindMouse 4,  15,   1, 305,  30, selectConversationOption, 0
 		
 		; on map screen
 		bindKey 2, 's', byteArgEopDispatcher, \
@@ -131,6 +118,19 @@ startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
 		
 		bindKey 27, A|0x86, printVersion, 0 ; Alt+F7
 		bindKey 27, A|0x87, printDebug,   0 ; Alt+F8
+		
+		bindKey 7, H|0xA3, moveCursor, H|0xA3 ; Shift+Tab
+		bindKey 7,      9, moveCursor,      9 ; Tab
+		bindKey 7,   0x8C, moveCursor,   0x8C ; (numeric keypad)
+		bindKey 7,   0x8D, moveCursor,   0x8D ; (numeric keypad)
+		bindKey 7,   0x8E, moveCursor,   0x8E ; (numeric keypad)
+		bindKey 7,   0x8F, moveCursor,   0x8F ; (numeric keypad)
+		bindKey 7,   0x91, moveCursor,   0x91 ; (numeric keypad)
+		bindKey 7,   0x92, moveCursor,   0x92 ; (numeric keypad)
+		bindKey 7,   0x93, moveCursor,   0x93 ; (numeric keypad)
+		bindKey 7,   0x94, moveCursor,   0x94 ; (numeric keypad)
+		bindKey 7,   0x95, moveCursor,   0x95 ; (numeric keypad)
+		bindKey 7,   0x96, moveCursor,   0x96 ; (numeric keypad)
 		
 	endBlockWithFillAt nop, off_bindsEnd
 endPatch

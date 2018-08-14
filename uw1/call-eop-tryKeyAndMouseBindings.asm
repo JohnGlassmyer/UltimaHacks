@@ -1,17 +1,19 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
-%include "include/uw1-eop.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+	%include "include/uw1-eop.asm"
+
+	defineAddress 12, 0x0018, tryHandlersInMainLoop
+%endif
 
 [bits 16]
 
-%define off_tryHandlersInMainLoop 0x1DD78
-
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		call eop tryKeyAndMouseBindings to respond to multiple simultaneous keys
 		
-	startBlockAt off_tryHandlersInMainLoop
+	startBlockAt addr_tryHandlersInMainLoop
 		push varArgsEopArg(tryKeyAndMouseBindings, 0)
 		callFromLoadModule varArgsEopDispatcher
 		add sp, 2
-	endBlockWithFillAt nop, off_tryHandlersInMainLoop + 11
+	endBlockOfLength 11
 endPatch

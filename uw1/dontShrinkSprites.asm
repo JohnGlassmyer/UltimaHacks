@@ -1,10 +1,12 @@
-%include "../UltimaPatcher.asm"
-%include "include/uw1.asm"
+%ifndef EXE_LENGTH
+	%include "../UltimaPatcher.asm"
+	%include "include/uw1.asm"
+
+	defineAddress 4, 0x6879, adjustSpriteVerticalPosition
+	defineAddress 4, 0x6898, adjustSpriteHeight
+%endif
 
 [bits 16]
-
-%define off_adjustVertical 0x108E9
-%define off_adjustHeight   0x10908
 
 ; This patch removes the view-pitch-dependent vertical scaling of sprites.
 ;
@@ -14,22 +16,20 @@
 ; to pitch the view up or down by a small amount. However, as my other patches
 ; have expanded the allowed range of view pitch, sprites of NPCs would be scaled
 ; to absurd dimensions when the player pitched the view further up or down.
-startPatch EXPANDED_OVERLAY_EXE_LENGTH, \
+startPatch EXE_LENGTH, \
 		do not scale sprite height and position with view pitch
 		
-	; scale vertical position of sprite
-	startBlockAt off_adjustVertical
+	startBlockAt addr_adjustSpriteVerticalPosition
 		; original: imul word [0x160A]
 		
 		shr ax, 1
 		mov dx, ax
-	endBlockAt startAbsolute + 4
+	endBlockOfLength 4
 	
-	; scale height of sprite
-	startBlockAt off_adjustHeight
+	startBlockAt addr_adjustSpriteHeight
 		; original: imul word [0x160A]
 		
 		shr ax, 1
 		mov dx, ax
-	endBlockAt startAbsolute + 4
+	endBlockOfLength 4
 endPatch
