@@ -46,7 +46,7 @@ with items:
                 p: use lockpicks
                 w: use pocketwatch
                 x: use sextant
-                g: count party gold
+                g: use abacus (count party gold)
 
 **Party members** can be selected, in many contexts, with corresponding
 number keys:
@@ -163,11 +163,11 @@ several new procedures (this increases the executable's size by a few kilobytes)
 This is the first task to be performed by the Java project built in the previous
 step (`UltimaPatcher.jar` should be found in the `target` directory):
 
-`java -jar UltimaPatcher.jar --exe=U7.EXE --expand_overlay_index=348 --expand_overlay_length=0x4000`
+`java -jar UltimaPatcher.jar --exe=U7.EXE --expand-overlay=343:0x2000 --write-to-exe`
 
-`java -jar UltimaPatcher.jar --exe=UW.EXE --expand_overlay_index=117 --expand_overlay_length=0x2400`
+`java -jar UltimaPatcher.jar --exe=UW.EXE --expand-overlay=117:0x2200 --write-to-exe`
 
-`java -jar UltimaPatcher.jar --exe=UW2.EXE --expand_overlay_index=93 --expand_overlay_length=0x2800`
+`java -jar UltimaPatcher.jar --exe=UW2.EXE --expand-overlay=93:0x2500 --write-to-exe`
 
 Finally, _UltimaPatcher_ must be invoked again to apply the .o patches to each
 executable. For example:
