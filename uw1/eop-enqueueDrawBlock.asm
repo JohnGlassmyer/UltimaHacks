@@ -49,7 +49,7 @@ startPatch EXE_LENGTH, \
 			
 		; print a warning message about approaching the draw queue limit
 			push cs
-			push offsetInEopSegment(drawQueueLimitWarningString)
+			push offsetInCodeSegment(drawQueueLimitWarningString)
 			callFromOverlay printStringToScroll
 			add sp, 4
 			

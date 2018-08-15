@@ -38,7 +38,7 @@ eopProc 0x050, enqueueGridCoords
 eopProc 0x030, flipToPanel
 eopProc 0x0E0, interactAtCursor
 eopProc 0x0B0, mapControl
-eopProc 0x150, moreBindings
+eopProc 0x120, moreBindings
 eopProc 0x0D0, mouseLookOrMoveCursor
 eopProc 0x0D0, runeKey
 eopProc 0x060, setInterfaceMode
@@ -54,6 +54,3 @@ eopProc 0x090, tryKeyAndMouseBindings
 		
 %define byteArgEopArg(eopName, byteArg) \
 		((eopNumber_ %+ eopName) << 8) + byteArg
-		
-%define offsetInEopSegment(label) \
-		(label - block_relativeStart) + block_startOffset

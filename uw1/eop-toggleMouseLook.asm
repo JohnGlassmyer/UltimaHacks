@@ -30,7 +30,7 @@ startPatch EXE_LENGTH, \
 			call calcJump(off_eop_setMouseLookState)
 			add sp, 2
 			
-			mov ax, offsetInEopSegment(mouseLookDisabledString)
+			mov ax, offsetInCodeSegment(mouseLookDisabledString)
 			
 			jmp printString
 			
@@ -39,7 +39,7 @@ startPatch EXE_LENGTH, \
 			call calcJump(off_eop_setMouseLookState)
 			add sp, 2
 			
-			mov ax, offsetInEopSegment(mouseLookEnabledString)
+			mov ax, offsetInCodeSegment(mouseLookEnabledString)
 			
 		printString:
 			mov byte [bp+var_string], 0

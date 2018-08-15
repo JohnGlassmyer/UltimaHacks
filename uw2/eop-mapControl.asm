@@ -54,7 +54,7 @@ startPatch EXE_LENGTH, \
 			dec bx
 			shr bx, 3
 			shl bx, 1
-			movzx ax, [cs:offsetInEopSegment(adjacentRealmTable)+bx+1]
+			movzx ax, [cs:offsetInCodeSegment(adjacentRealmTable)+bx+1]
 			jmp haveNewRealm
 			
 		realmDown:
@@ -62,7 +62,7 @@ startPatch EXE_LENGTH, \
 			dec bx
 			shr bx, 3
 			shl bx, 1
-			movzx ax, [cs:offsetInEopSegment(adjacentRealmTable)+bx+0]
+			movzx ax, [cs:offsetInCodeSegment(adjacentRealmTable)+bx+0]
 			jmp haveNewRealm
 			
 		haveNewRealm:

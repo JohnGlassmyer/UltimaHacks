@@ -102,6 +102,14 @@
 	%assign block_relocationCount block_relocationCount + 1
 %endmacro
 
+%macro dwWithRelocation 1
+	%push blockRelocationContext
+	%assign %$relocationOffset 0
+	%$relocationBase:
+	dw %1
+	%assign block_relocationCount block_relocationCount + 1
+%endmacro
+
 ; defineSegment segmentIndex, segmentFromOverlay, segmentFromLoadModule, name
 %macro defineSegment 3-4
 	%assign segmentFromOverlay_%[%1] %2
@@ -132,3 +140,6 @@
 %macro callFromLoadModule 1
 	callWithRelocation segmentFromLoadModule_%[%1]:off_%[%1]
 %endmacro
+
+%define offsetInCodeSegment(label) \
+		(label - block_relativeStart) + block_startOffset

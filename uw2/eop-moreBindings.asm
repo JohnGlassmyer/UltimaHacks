@@ -5,6 +5,7 @@
 
 [bits 16]
 
+; UW2-specific bindings
 startPatch EXE_LENGTH, \
 		expanded overlay procedure: moreBindings
 		
@@ -19,29 +20,56 @@ startPatch EXE_LENGTH, \
 		push si
 		push di
 		
-		; UW2-specific:
+		mov di, offsetInCodeSegment(keyBindings)
+		forKeyBinding:
+			cmp di, offsetInCodeSegment(keyBindings_end)
+			jae keyBindings_end
+			
+			push cs
+			pop es
+			
+			bindDKeyAt es:di
+			
+			add di, dKey_SIZE
+			jmp forKeyBinding
+			
+		keyBindings:
+			dKey 1, 0x81, setInteractionMode, 0 ; F2
+			dKey 1, 0x80, setInteractionMode, 1 ; F1
+			dKey 1, 0x84, setInteractionMode, 2 ; F5
+			dKey 1, 0x82, setInteractionMode, 3 ; F3
+			dKey 1, 0x83, setInteractionMode, 4 ; F4
+			dKey 1, 0x85, setInteractionMode, 5 ; F6
+			
+			dKey 2, 'd', byteArgEopDispatcher, byteArgEopArg(mapControl, MapControl_REALM_UP)
+			dKey 2, 'a', byteArgEopDispatcher, byteArgEopArg(mapControl, MapControl_REALM_DOWN)
+			
+			dKey 27, A|'h', toggleBool, dseg_mouseHand ; Alt+h
+		keyBindings_end:
 		
-		; click areas adjacent to compass to turn (broken in original game)
-		bindMouse 1,  66,  33,  84,  49, easyMove, -1  ; Easy-left
-		bindMouse 1, 156,  33, 174,  49, easyMove,  1  ; Easy-right
-		
-		bindKey 1, 0x81, setInteractionMode, 0 ; F2
-		bindKey 1, 0x80, setInteractionMode, 1 ; F1
-		bindKey 1, 0x84, setInteractionMode, 2 ; F5
-		bindKey 1, 0x82, setInteractionMode, 3 ; F3
-		bindKey 1, 0x83, setInteractionMode, 4 ; F4
-		bindKey 1, 0x85, setInteractionMode, 5 ; F6
-		
-		bindMouse 4,  70, 135, 116, 188, clickOtherTrade, 4
-		bindMouse 4, 119, 135, 163, 188, clickAvatarTrade, 4
-		bindMouse 4,  16,   1, 223,  30, selectConversationOption, 0
-		
-		bindKey 2, 'd', byteArgEopDispatcher, \
-				byteArgEopArg(mapControl, MapControl_REALM_UP)
-		bindKey 2, 'a', byteArgEopDispatcher, \
-				byteArgEopArg(mapControl, MapControl_REALM_DOWN)
-		
-		bindKey 27, A|'h',  toggleBool,   dseg_mouseHand ; Alt+h
+		mov di, offsetInCodeSegment(mouseBindings)
+		forMouseBinding:
+			cmp di, offsetInCodeSegment(mouseBindings_end)
+			jae mouseBindings_end
+			
+			push cs
+			pop es
+			
+			bindDMouseAt es:di
+			
+			add di, dMouse_SIZE
+			jmp forMouseBinding
+			
+		mouseBindings:
+			; click areas adjacent to compass to turn (broken in original game)
+			dMouse 1,  66,  33,  84,  49, easyMove, -1  ; Easy-left
+			dMouse 1, 156,  33, 174,  49, easyMove,  1  ; Easy-right
+			
+			; in conversation
+			dMouse 4,  70, 135, 116, 188, clickOtherTrade,          4
+			dMouse 4, 119, 135, 163, 188, clickAvatarTrade,         4
+			dMouse 4,  16,   1, 223,  30, selectConversationOption, 0
+		mouseBindings_end:
 		
 		pop di
 		pop si
