@@ -1,4 +1,4 @@
-package net.johnglassmyer.ultimapatcher;
+package net.johnglassmyer.ultimahacks.ultimapatcher;
 
 import java.util.List;
 import java.util.function.BiFunction;

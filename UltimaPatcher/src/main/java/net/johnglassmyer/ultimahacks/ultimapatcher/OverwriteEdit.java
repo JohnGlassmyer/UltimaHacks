@@ -1,4 +1,4 @@
-package net.johnglassmyer.ultimapatcher;
+package net.johnglassmyer.ultimahacks.ultimapatcher;
 
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
@@ -6,7 +6,7 @@ import java.util.Optional;
 
 import com.google.protobuf.ByteString;
 
-import net.johnglassmyer.ultimahacks.common.HackProto;
+import net.johnglassmyer.ultimahacks.proto.HackProto;
 
 class OverwriteEdit implements Edit {
 	static Optional<Edit> fromProtoEdit(HackProto.Edit protoEdit) {
@@ -45,7 +45,7 @@ class OverwriteEdit implements Edit {
 	}
 
 	@Override
-	public net.johnglassmyer.ultimahacks.common.HackProto.Edit toProtoMessage() {
+	public HackProto.Edit toProtoMessage() {
 		HackProto.Edit.Builder editBuilder = HackProto.Edit.newBuilder();
 		HackProto.OverwriteEdit.Builder overwriteBuilder = editBuilder.getOverwriteBuilder();
 		overwriteBuilder.setStart(start);

@@ -1,4 +1,4 @@
-package net.johnglassmyer.ultimapatcher;
+package net.johnglassmyer.ultimahacks.ultimapatcher;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static net.johnglassmyer.uncheckers.IoUncheckers.callUncheckedIoRunnable;
@@ -39,8 +39,8 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.util.PathConverter;
 import joptsimple.util.PathProperties;
-import net.johnglassmyer.ultimahacks.common.HackProto;
-import net.johnglassmyer.ultimapatcher.Segment.Patchable;
+import net.johnglassmyer.ultimahacks.proto.HackProto;
+import net.johnglassmyer.ultimahacks.ultimapatcher.Segment.Patchable;
 
 /**
  * Applies patches to MS-DOS executables with overlays (originally, to Ultima VII's U7.EXE).
@@ -186,55 +186,62 @@ public class UltimaPatcher {
 			options = null;
 		}
 
+		main(options);
+	}
+
+	private static void main(Options options) {
 		List<Patch> patches = options.patch.stream()
 				.map(uncheckIoFunction(UltimaPatcher::readPatchFile))
 				.collect(Collectors.toList());
 
-		Optional<Hack> optionalHack = options.hackProto
-				.map(uncheckIoFunction(Files::readAllBytes))
-				.map(uncheckFunction(HackProto.Hack::parseFrom))
-				.map(Hack::fromProtoHack);
-
 		if (options.exe.isPresent()) {
 			Path exePath = options.exe.get();
 
+			ImmutableList.Builder<Edit> editsBuilder = ImmutableList.builder();
+
+			int originalExeLength;
 			Executable executable;
-			ImmutableList<Edit> expandOverlayEdits; {
+			{
 				Executable originalExecutable =
 						callUncheckedIoSupplier(() -> Executable.readFromFile(exePath));
 				originalExecutable.logSummary();
 
+				originalExeLength = originalExecutable.fileLength;
+
 				ExecutableEditState expandedExecutableState =
 						withExpandedOverlays(originalExecutable, options.expandOverlay);
 				executable = expandedExecutableState.executable;
-				expandOverlayEdits = expandedExecutableState.accumulatedEdits;
+
+				editsBuilder.addAll(expandedExecutableState.accumulatedEdits);
 			}
 
 			if (!patches.isEmpty()) {
 				L.info(patches.size() + " patches:");
 				for (Patch patch : patches) {
 					patch.logDescription(options.showPatchBytes);
-					if (patch.targetLength != executable.fileLength && !options.ignoreExeLength) {
-						L.error(String.format(
-								"Patch target file length 0x%X differs from executable length 0x%X."
-								+ " Use --ignore-exe-length to bypass this check.",
-								patch.targetLength,
-								executable.fileLength));
-						System.exit(0xDEADBEEF);
-					}
+
+					checkTargetLength(
+							patch.targetLength, executable.fileLength, options.ignoreExeLength);
 				}
+
+				editsBuilder.addAll(editsForPatches(executable, patches));
 			}
 
-			ImmutableList<Edit> patchEdits = editsForPatches(executable, patches);
+			options.hackProto
+					.map(uncheckIoFunction(Files::readAllBytes))
+					.map(uncheckFunction(HackProto.Hack::parseFrom))
+					.map(Hack::fromProtoHack)
+					.ifPresent(hack -> {
+				L.info("read hack proto");
 
-			ImmutableList<Edit> resultingEdits; {
-				ImmutableList.Builder<Edit> builder = ImmutableList.builder();
-				builder.addAll(expandOverlayEdits);
-				builder.addAll(patchEdits);
-				builder.addAll(optionalHack.map(hack -> hack.edits).orElse(ImmutableList.of()));
-				resultingEdits = builder.build();
-			}
+				hack.targetLength.ifPresent(targetLength -> {
+					checkTargetLength(targetLength, originalExeLength, options.ignoreExeLength);
+				});
 
+				editsBuilder.addAll(hack.edits);
+			});
+
+			ImmutableList<Edit> resultingEdits = editsBuilder.build();
 			if (!resultingEdits.isEmpty()) {
 				L.info("{} resulting edits:", resultingEdits.size());
 				logMappedValues(Justification.LEFT, resultingEdits, Edit::explanation);
@@ -245,7 +252,7 @@ public class UltimaPatcher {
 				} else if (options.writeHackProto.isPresent()) {
 					Path hackPath = options.writeHackProto.get();
 					L.info("writing hack proto to {}", hackPath);
-					writeHackProto(hackPath, resultingEdits);
+					writeHackProto(hackPath, resultingEdits, originalExeLength);
 				} else {
 					L.info("Use --write-to-exe to patch the executable"
 							+ (options.hackProto.isPresent()
@@ -294,6 +301,18 @@ public class UltimaPatcher {
 			for (Patch patch : patches) {
 				patch.logDescription(options.showPatchBytes);
 			}
+		}
+	}
+
+	private static void checkTargetLength(
+			Integer targetLength, int fileLength, boolean ignoreExeLength) {
+		if (targetLength != fileLength && !ignoreExeLength) {
+			L.error(String.format(
+					"Target file length 0x%X differs from executable length 0x%X."
+					+ " Use --ignore-exe-length to bypass this check.",
+					targetLength,
+					fileLength));
+			System.exit(0xDEADBEEF);
 		}
 	}
 
@@ -494,14 +513,10 @@ public class UltimaPatcher {
 		});
 	}
 
-	private static void writeHackProto(Path hackPath, ImmutableList<Edit> expandAndPatchEdits) {
-		HackProto.Hack.Builder hackBuilder = HackProto.Hack.newBuilder();
-		expandAndPatchEdits.stream()
-				.map(Edit::toProtoMessage)
-				.forEachOrdered(hackBuilder::addEdit);
-
-		callUncheckedIoRunnable(() ->
-				Files.write(hackPath, hackBuilder.build().toByteArray()));
+	private static void writeHackProto(
+			Path hackProtoPath, ImmutableList<Edit> edits, int targetLength) {
+		Hack hack = new Hack(edits, Optional.of(targetLength));
+		callUncheckedIoRunnable(() -> Files.write(hackProtoPath, hack.toProtoHack().toByteArray()));
 	}
 
 	private static <T> void logMappedValues(

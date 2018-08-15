@@ -1,4 +1,4 @@
-package net.johnglassmyer.ultimapatcher;
+package net.johnglassmyer.ultimahacks.ultimapatcher;
 
 import static com.google.common.base.Verify.verify;
 

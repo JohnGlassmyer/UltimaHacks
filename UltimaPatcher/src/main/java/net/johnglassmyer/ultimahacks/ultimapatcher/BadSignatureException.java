@@ -1,4 +1,4 @@
-package net.johnglassmyer.ultimapatcher;
+package net.johnglassmyer.ultimahacks.ultimapatcher;
 
 class BadSignatureException extends RuntimeException {
 	static private final long serialVersionUID = 1L;

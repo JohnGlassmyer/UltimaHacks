@@ -1,4 +1,4 @@
-package net.johnglassmyer.ultimapatcher;
+package net.johnglassmyer.ultimahacks.ultimapatcher;
 
 import static java.util.stream.IntStream.range;
 import java.io.IOException;
@@ -14,7 +14,7 @@ import java.util.TreeSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import net.johnglassmyer.ultimapatcher.Segment.Patchable;
+import net.johnglassmyer.ultimahacks.ultimapatcher.Segment.Patchable;
 
 class Executable {
 	private static final Logger L = LogManager.getLogger(Executable.class);

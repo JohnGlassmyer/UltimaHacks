@@ -1,10 +1,10 @@
-package net.johnglassmyer.ultimapatcher;
+package net.johnglassmyer.ultimahacks.ultimapatcher;
 
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 import java.util.Optional;
 
-import net.johnglassmyer.ultimahacks.common.HackProto;
+import net.johnglassmyer.ultimahacks.proto.HackProto;
 
 interface Edit {
 	Optional<String> explanation();

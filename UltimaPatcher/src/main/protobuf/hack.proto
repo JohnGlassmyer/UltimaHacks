@@ -1,10 +1,14 @@
 syntax = "proto3";
 
-option java_package = "net.johnglassmyer.ultimahacks.common";
+import "google/protobuf/wrappers.proto";
+
+package net.johnglassmyer.ultimahacks.proto;
+
 option java_outer_classname = "HackProto";
 
 message Hack {
 	repeated Edit edit = 1;
+	.google.protobuf.UInt32Value target_length = 2;
 }
 
 message Edit {
