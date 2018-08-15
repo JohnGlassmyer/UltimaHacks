@@ -18,13 +18,9 @@ class RelocationTracker {
 		Map<Integer, NavigableSet<Integer>> overlayMap = new HashMap<>();
 		range(0, executable.segments.size()).forEach(segmentIndex -> {
 			Segment segment = executable.segments.get(segmentIndex);
-//		Streams.mapWithIndex(executable.segments.stream(), (segment, segmentIndex) -> {
 			segment.optionalOverlay.ifPresent(overlay ->
 				overlayMap.put(segmentIndex, new TreeSet<>(
 						overlay.relocationTable.originalAddresses)));
-
-//			return Util.TODO_USE_FOREACHWITHINDEX;
-//		});
 		});
 
 		return new RelocationTracker(executable, loadModuleRelocations, overlayMap);
