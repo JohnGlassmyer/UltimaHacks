@@ -272,13 +272,12 @@ public class UltimaPatcher {
 						int segmentIndex = address.segmentIndex;
 						if (0 <= segmentIndex  && segmentIndex < executable.segments.size()) {
 							Patchable patchable = executable.segments.get(segmentIndex).patchable();
-							int offset = address.offset;
 							int patchableZeroInFile =
 									patchable.startInFile() - patchable.startOffset();
-							if (patchable.startOffset() <= offset
-									&& offset <= patchable.endOffset()) {
+							if (patchable.startOffset() <= address.offset
+									&& address.offset <= patchable.endOffset()) {
 								return Optional.of(String.format(
-										"0x%05X", offset - patchableZeroInFile));
+										"0x%05X", patchableZeroInFile + address.offset));
 							}
 						}
 
