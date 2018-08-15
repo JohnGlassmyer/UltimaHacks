@@ -5,7 +5,7 @@
 ; github.com/JohnGlassmyer/UltimaHacks
 
 ; assuming that overlay 93 was expanded and moved to the end of the executable:
-; java -jar UltimaPatcher.jar --exe=UW2.EXE --expand-overlay=93:0x2200 (...)
+; java -jar UltimaPatcher.jar --exe=UW2.EXE --expand-overlay=93:0x2500 (...)
 
 ; =============================================================================
 ; length of executable to be patched, and of expanded overlay
@@ -13,7 +13,7 @@
 ; assuming that the expanded overlay has been moved to the end of the file
 
 %assign ORIGINAL_EXE_LENGTH                     0xA4D70
-%assign EXPANDED_OVERLAY_LENGTH                 0x2200
+%assign EXPANDED_OVERLAY_LENGTH                 0x2500
 %assign ORIGINAL_EOP_LENGTH                     0x0E2F
 
 %assign EXE_LENGTH (ORIGINAL_EXE_LENGTH + EXPANDED_OVERLAY_LENGTH)
