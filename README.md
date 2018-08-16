@@ -133,7 +133,7 @@ Keys for navigating the **map**:
                 a: next realm (Ultima Underworld II only)
                 c: go to Avatar's level
 
-## How to Apply The Patches
+## How to Apply the Patches
 
 These patches are intended to be applied to particular versions of the games,
 all as distributed by GOG.com:
@@ -141,11 +141,40 @@ all as distributed by GOG.com:
 * Ultima Underworld vF1.94S
 * Ultima Underworld II vF1.99S
 
-Game executables, as well as saved games, should be backed up before proceeding.
+Pre-assembled patches can be applied to a game's executable in seconds with
+the **Hack Applier website**:
 
-NASM, a Java 1.9 or higher JDK, and Apache Maven should be installed and on the
-system path before attepting to build the code and apply the patches. Git for
-Windows supplies a Bash shell capable of processing the listed commands.
+https://johnglassmyer.github.io/UltimaHacks/
+
+To use the website, select the game executable file (U7.EXE, UW.EXE, or
+UW2.EXE) from your installation of the game, select the corresponding "hack"
+for that game from the drop-down, and then click the "Apply" button to save
+a patched copy of the executable, with which you can replace the original
+file in your installation of the game.
+
+Game executables, as well as saved games, should be backed up before applying
+patches. Always keep a copy of the original, un-patched executable on-hand.
+
+Note that if you intend to patch a GOG.com installation of Ultima Underworld
+or Ultima Underworld II that uses an ISO CD image (`game.gog`), then the
+executable file you need to patch is contained within that CD image. In
+that case, you can either
+
+* extract the contents of the `game.gog` image to a directory using a program
+such as 7-Zip, and then edit DOSBox's configuration to have it mount that
+directory as the CD-ROM drive in place of the `game.gog` image, or
+
+* extract the contents of `game.gog`, patch the executable, and then
+build a new `game.gog` ISO with the patched executable included
+
+## How to Build the Patches (Advanced)
+
+If all you want to do is play the games with the patches applied, please use
+the Hack Applier site mentioned in the preceding section.
+
+Building the patches from source requires NASM, a Java 1.9 or higher JDK, and
+Apache Maven to be installed and on the system path. Git for Windows supplies
+a Bash shell capable of processing the example commands.
 
 The patch sources can be assembled to `.o` binaries by invoking NASM in the
 `ultima7`, `uw1`, or `uw2` directory:
@@ -177,3 +206,17 @@ executable. For example:
 `for o in uw1/*.o ; do java -jar UltimaPatcher.jar --exe=UW.EXE --patch=$o ; done`
 
 `for o in uw2/*.o ; do java -jar UltimaPatcher.jar --exe=UW2.EXE --patch=$o ; done`
+
+## More about UltimaPatcher
+
+More generally, _UltimaPatcher_ has the capability to
+
+* analyze the segment layout of a DOS executable that uses `FBOV` overlays
+* expand overlay segments within such an executable (to make room for new code)
+* compile a set of patches into a hack proto (a type of Google Protocol Buffer
+data-serialization message)
+* apply a set of patches or a previously compiled hack proto to an executable
+
+The assembly file _UltimaPatcher.asm_ provides NASM assembly macros used to
+produce assembled object files containing metadata that _UltimaPatcher_ uses
+to apply patch blocks to an executable.
