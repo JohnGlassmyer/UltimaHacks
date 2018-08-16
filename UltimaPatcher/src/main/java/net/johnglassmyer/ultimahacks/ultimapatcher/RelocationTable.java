@@ -5,14 +5,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.google.common.collect.ImmutableSet;
 
 abstract class RelocationTable {
-	static private Logger L = LogManager.getLogger(RelocationTable.class);
-
 	final int startInFile;
 	final ImmutableSet<Integer> originalAddresses;
 

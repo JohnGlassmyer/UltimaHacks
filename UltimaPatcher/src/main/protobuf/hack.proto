@@ -9,6 +9,7 @@ option java_outer_classname = "HackProto";
 message Hack {
 	repeated Edit edit = 1;
 	.google.protobuf.UInt32Value target_length = 2;
+	.google.protobuf.StringValue comment = 3;
 }
 
 message Edit {

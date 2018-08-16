@@ -3,6 +3,7 @@ package net.johnglassmyer.ultimahacks.ultimapatcher;
 import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.StringValue;
 import com.google.protobuf.UInt32Value;
 
 import net.johnglassmyer.ultimahacks.proto.HackProto;
@@ -20,15 +21,21 @@ class Hack {
 				? Optional.of(protoHack.getTargetLength().getValue())
 				: Optional.empty();
 
-		return new Hack(edits, targetLength);
+		Optional<String> comment = protoHack.hasComment()
+				? Optional.of(protoHack.getComment().getValue())
+				: Optional.empty();
+
+		return new Hack(edits, targetLength, comment);
 	}
 
 	final ImmutableList<Edit> edits;
 	final Optional<Integer> targetLength;
+	final Optional<String> comment;
 
-	Hack(ImmutableList<Edit> edits, Optional<Integer> targetLength) {
+	Hack(ImmutableList<Edit> edits, Optional<Integer> targetLength, Optional<String> comment) {
 		this.edits = edits;
 		this.targetLength = targetLength;
+		this.comment = comment;
 	}
 
 	HackProto.Hack toProtoHack() {
@@ -39,6 +46,8 @@ class Hack {
 				.forEachOrdered(hackBuilder::addEdit);
 
 		targetLength.ifPresent(value -> hackBuilder.setTargetLength(UInt32Value.of(value)));
+
+		comment.ifPresent(value -> hackBuilder.setComment(StringValue.of(value)));
 
 		return hackBuilder.build();
 	}

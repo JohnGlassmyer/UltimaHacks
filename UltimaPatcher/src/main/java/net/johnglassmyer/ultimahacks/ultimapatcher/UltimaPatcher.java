@@ -97,6 +97,10 @@ public class UltimaPatcher {
 					.withRequiredArg()
 					.withValuesConvertedBy(new PathConverter());
 
+			OptionSpec<String> hackComment = optionParser.accepts("hack-comment")
+					.availableIf(writeHackProto)
+					.withRequiredArg();
+
 			OptionSpec<String> fileToSegmented = optionParser.accepts("file-to-segmented")
 					.availableUnless(listRelocations, patch, hackProto)
 					.withRequiredArg();
@@ -118,6 +122,7 @@ public class UltimaPatcher {
 					optionSet.valueOfOptional(hackProto),
 					optionSet.has(writeToExe),
 					optionSet.valueOfOptional(writeHackProto),
+					optionSet.valueOfOptional(hackComment),
 					optionSet.valuesOf(fileToSegmented),
 					optionSet.valuesOf(segmentedToFile));
 		}
@@ -132,6 +137,7 @@ public class UltimaPatcher {
 		final Optional<Path> hackProto;
 		final boolean writeToExe;
 		final Optional<Path> writeHackProto;
+		final Optional<String> hackComment;
 		final List<String> fileToSegmented;
 		final List<String> segmentedToFile;
 
@@ -146,6 +152,7 @@ public class UltimaPatcher {
 				Optional<Path> hackProto,
 				boolean writeToExe,
 				Optional<Path> writeHackProto,
+				Optional<String> hackComment,
 				List<String> fileToSegmented,
 				List<String> segmentedToFile) {
 			this.exe = exe;
@@ -158,6 +165,7 @@ public class UltimaPatcher {
 			this.hackProto = hackProto;
 			this.writeToExe = writeToExe;
 			this.writeHackProto = writeHackProto;
+			this.hackComment = hackComment;
 			this.fileToSegmented = fileToSegmented;
 			this.segmentedToFile = segmentedToFile;
 		}
@@ -241,6 +249,12 @@ public class UltimaPatcher {
 					L.info("  hack does not specify a target file length");
 				});
 
+				hack.comment.ifPresentOrElse(comment -> {
+					L.info("  hack comment: {}", comment);
+				}, () -> {
+					L.info("  has does not specify a comment");
+				});
+
 				editsBuilder.addAll(hack.edits);
 			});
 
@@ -255,7 +269,8 @@ public class UltimaPatcher {
 				} else if (options.writeHackProto.isPresent()) {
 					Path hackPath = options.writeHackProto.get();
 					L.info("writing hack proto to {}", hackPath);
-					writeHackProto(hackPath, resultingEdits, originalExeLength);
+					writeHackProto(
+							hackPath, resultingEdits, originalExeLength, options.hackComment);
 				} else {
 					L.info("Use --write-to-exe to patch the executable"
 							+ (options.hackProto.isPresent()
@@ -517,9 +532,9 @@ public class UltimaPatcher {
 	}
 
 	private static void writeHackProto(
-			Path hackProtoPath, ImmutableList<Edit> edits, int targetLength) {
-		Hack hack = new Hack(edits, Optional.of(targetLength));
-		callUncheckedIoRunnable(() -> Files.write(hackProtoPath, hack.toProtoHack().toByteArray()));
+			Path path, ImmutableList<Edit> edits, int targetLength, Optional<String> comment) {
+		Hack hack = new Hack(edits, Optional.of(targetLength), comment);
+		callUncheckedIoRunnable(() -> Files.write(path, hack.toProtoHack().toByteArray()));
 	}
 
 	private static <T> void logMappedValues(
