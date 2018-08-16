@@ -5,6 +5,10 @@ Labyrinth of Worlds_ (1993), written as bits of (mostly 16-bit) x86 assembly,
 together with a program, written in Java, that patches them into the game's
 executable.
 
+There is also a website (mentioned below) which can quickly apply pre-assembled
+versions of the patches, for people not interested in building the patches
+from source code.
+
 The hacks take the form of assembly files written in NASM syntax, and rely on
 some supporting macros that include metadata in the assembled output files
 regarding overall placement in the patched executable file as well as the
