@@ -9,15 +9,12 @@ There is also a website (mentioned below) which can quickly apply pre-assembled
 versions of the patches, for people not interested in building the patches
 from source code.
 
-The hacks take the form of assembly files written in NASM syntax, and rely on
+The patches take the form of assembly files written in NASM syntax, and rely on
 some supporting macros that include metadata in the assembled output files
 regarding overall placement in the patched executable file as well as the
 locations of segment references (in particular, the segment portions of far
 procedure calls) which necessitate edits to the patched executable's relocation
 tables.
-
-The Java project, UltimaPatcher, requires Java 1.9 or higher to compile and uses
-the Apache Maven build system.
 
 Each game with patches applied is fully playable in DOSBox and most likely
 on original (386/486) hardware as well (though I haven't had a chance to
@@ -176,9 +173,12 @@ build a new `game.gog` ISO with the patched executable included
 If all you want to do is play the games with the patches applied, please use
 the Hack Applier site mentioned in the preceding section.
 
-Building the patches from source requires NASM, a Java 1.9 or higher JDK, and
-Apache Maven to be installed and on the system path. Git for Windows supplies
-a Bash shell capable of processing the example commands.
+Building the patches from source requires that NASM (for assembling the
+individual patches), as well as a Java 1.9 or higher JDK and Apache Maven
+(for build the _UltimaPatcher_ program), be installed and on the system path.
+
+On Windows systems, [Git for Windows](https://gitforwindows.org/) provides
+a Bash shell capable of processing the example commands given.
 
 The patch sources can be assembled to `.o` binaries by invoking NASM in the
 `ultima7`, `uw1`, or `uw2` directory:
