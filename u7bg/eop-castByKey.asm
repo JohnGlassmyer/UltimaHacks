@@ -1,0 +1,92 @@
+%include "include/u7bg-all-includes.asm"
+
+%assign ADD_RUNE_SOUND                  15
+%assign REMOVE_RUNE_SOUND               92
+
+%assign NUMBER_OF_SPELLS                72
+
+%macro gameSpecificSpellRunes 0
+; Linear
+	db 'az', 0
+	db 'rh', 0
+	db 'af', 0
+	db 'bo', 0
+	db 'bl', 0
+	db 'kl', 0
+	db 'if', 0
+	db 'vk', 0
+; First Circle
+	db 'imy', 0
+	db 'an', 0
+	db 'wj', 0
+	db 'vaf', 0
+	db 'vif', 0
+	db 'il', 0
+	db 'iw', 0
+	db 'vaz', 0
+; Second Circle
+	db 'aj', 0
+	db 'oy', 0
+	db 'vf', 0
+	db 'vl', 0
+	db 'van', 0
+	db 'us', 0
+	db 'opy', 0
+	db 'pow', 0
+; Third Circle
+	db 'ds', 0
+	db 'm', 0
+	db 'kbx', 0
+	db 'vus', 0
+	db 'ap', 0
+	db 'vw', 0
+	db 'in', 0
+	db 'iz', 0
+; Fourth Circle
+	db 'kx', 0
+	db 'og', 0
+	db 'kpy', 0
+	db 'vds', 0
+	db 'kop', 0
+	db 'wq', 0
+	db 'kwc', 0
+	db 'ep', 0
+; Fifth Circle
+	db 'axe', 0
+	db 'px', 0
+	db 'ag', 0
+	db 'vfh', 0
+	db 'vm', 0
+	db 'sl', 0
+	db 'ifg', 0
+	db 'vz', 0
+; Sixth Circle
+	db 'qw', 0
+	db 'iqx', 0
+	db 'kfg', 0
+	db 'vifg', 0
+	db 'voh', 0
+	db 'ing', 0
+	db 'izg', 0
+	db 'vpy', 0
+; Seventh Circle
+	db 'ry', 0
+	db 'cp', 0
+	db 'tvf', 0
+	db 'isg', 0
+	db 'ihgy', 0
+	db 'vaxe', 0
+	db 'ivp', 0
+	db 'vkm', 0
+; Eighth Circle
+	db 'vkamicht', 0
+	db 'vch', 0
+	db 'vc', 0
+	db 'vsl', 0
+	db 'imc', 0
+	db 'kvx', 0
+	db 'ijpy', 0
+	db 'at', 0
+%endmacro
+
+%include "../u7-common/patch-eop-castByKey.asm"

@@ -1,0 +1,10 @@
+%include "../UltimaPatcher.asm"
+%include "../u7-common/constants.asm"
+%include "../u7-common/eop.asm"
+%include "../u7-common/macro-ambientSounds.asm"
+%include "../u7-common/macros-for-eop.asm"
+%include "include/u7si-segments.asm"
+%include "include/u7si.asm"
+%include "include/u7si-eop1.asm"
+%include "include/u7si-eop2.asm"
+
