@@ -234,8 +234,11 @@ public class UltimaPatcher {
 					.ifPresent(hack -> {
 				L.info("read hack proto");
 
-				hack.targetLength.ifPresent(targetLength -> {
+				hack.targetLength.ifPresentOrElse(targetLength -> {
+					L.info(String.format("  hack target file length: 0x%X", targetLength));
 					checkTargetLength(targetLength, originalExeLength, options.ignoreExeLength);
+				}, () -> {
+					L.info("  hack does not specify a target file length");
 				});
 
 				editsBuilder.addAll(hack.edits);
