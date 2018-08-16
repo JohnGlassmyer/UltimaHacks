@@ -175,7 +175,8 @@ the Hack Applier site mentioned in the preceding section.
 
 Building the patches from source requires that NASM (for assembling the
 individual patches), as well as a Java 1.9 or higher JDK and Apache Maven
-(for build the _UltimaPatcher_ program), be installed and on the system path.
+(for building the _UltimaPatcher_ program), be installed and on the system
+path.
 
 On Windows systems, [Git for Windows](https://gitforwindows.org/) provides
 a Bash shell capable of processing the example commands given.
@@ -221,6 +222,6 @@ More generally, _UltimaPatcher_ has the capability to
 data-serialization message)
 * apply a set of patches or a previously compiled hack proto to an executable
 
-The assembly file _UltimaPatcher.asm_ provides NASM assembly macros used to
+The assembly file `UltimaPatcher.asm` provides NASM assembly macros used to
 produce assembled object files containing metadata that _UltimaPatcher_ uses
 to apply patch blocks to an executable.
