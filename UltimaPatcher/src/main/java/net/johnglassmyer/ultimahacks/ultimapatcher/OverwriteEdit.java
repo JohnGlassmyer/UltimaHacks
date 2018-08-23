@@ -39,6 +39,14 @@ class OverwriteEdit implements Edit {
 		return explanation;
 	}
 
+	int getStart() {
+		return start;
+	}
+
+	int length() {
+		return data.length;
+	}
+
 	@Override
 	public void applyToFile(SeekableByteChannel channel) throws IOException {
 		Util.write(channel, start, data);

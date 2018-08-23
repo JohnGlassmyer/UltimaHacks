@@ -3,12 +3,15 @@ package net.johnglassmyer.ultimahacks.ultimapatcher;
 import static java.util.stream.IntStream.range;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
+
+import com.google.common.collect.Maps;
 
 class RelocationTracker {
 	static RelocationTracker forExecutable(Executable executable) {
@@ -53,17 +56,61 @@ class RelocationTracker {
 		}
 	}
 
-	Collection<Edit> produceEdits() {
-		Collection<Edit> edits = new ArrayList<>();
+	List<Edit> produceEdits() {
+		List<Edit> edits = new ArrayList<>();
+		edits.addAll(produceAndCheckLoadModuleEdits());
+		edits.addAll(produceAndCheckOverlayEdits());
+		return edits;
+	}
 
-		LoadModule loadModule = executable.loadModule;
-		edits.addAll(loadModule.relocationTable.produceEdits(loadModuleRelocations));
+	List<OverwriteEdit> produceAndCheckLoadModuleEdits() {
+		List<OverwriteEdit> loadModuleEdits =
+				executable.loadModule.relocationTable.produceEdits(loadModuleRelocations);
 
-		relocationsForOverlay.forEach((segmentIndex, relocations) -> {
-			Overlay overlay = executable.segments.get(segmentIndex).optionalOverlay.get();
-			edits.addAll(overlay.relocationTable.produceEdits(relocations));
+		int loadModuleStartInFile = executable.loadModule.mzHeader.loadModuleStartInFile();
+
+		loadModuleEdits.forEach(edit -> {
+			if (loadModuleStartInFile < edit.getStart() + edit.length()) {
+				throw new IllegalStateException(String.format(
+						"relocation table edit %s for load module overlaps load module at %X",
+						edit,
+						loadModuleStartInFile));
+			}
 		});
 
-		return edits;
+		return loadModuleEdits;
+	}
+
+	List<OverwriteEdit> produceAndCheckOverlayEdits() {
+		Map<Integer, List<OverwriteEdit>> editsBySegmentIndex =
+				Maps.transformEntries(relocationsForOverlay, (segmentIndex, relocations) -> {
+			return executable.segments.get(segmentIndex).optionalOverlay
+					.map(overlay -> overlay.relocationTable.produceEdits(relocations)).get();
+		});
+
+		OptionalNavigableSet<Integer> sortedOverlayStarts = OptionalNavigableSet.of(
+				executable.segments.stream()
+						.flatMap(s -> s.optionalOverlay.stream())
+						.map(o -> o.startInFile)
+						.sorted()
+						.collect(Collectors.toCollection(TreeSet::new)));
+
+		editsBySegmentIndex.forEach((segmentIndex, edits) -> {
+			executable.segments.get(segmentIndex).optionalOverlay
+					.flatMap(overlay -> sortedOverlayStarts.optionalHigher(overlay.startInFile))
+					.ifPresent(nextOverlayStart -> edits.stream()
+							.filter(edit -> nextOverlayStart < edit.getStart() + edit.length())
+							.findFirst()
+							.ifPresent(overlappingEdit -> {
+			throw new IllegalStateException(String.format(
+					"relocation table edit %s for overlay %d overlaps following overlay at %X",
+					overlappingEdit,
+					segmentIndex,
+					nextOverlayStart));
+		}));});
+
+		return editsBySegmentIndex.values().stream()
+				.flatMap(List::stream)
+				.collect(Collectors.toList());
 	}
 }

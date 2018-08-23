@@ -1,7 +1,6 @@
 package net.johnglassmyer.ultimahacks.ultimapatcher;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
@@ -16,11 +15,9 @@ abstract class RelocationTable {
 		this.originalAddresses = originalAddresses;
 	}
 
-	Collection<OverwriteEdit> produceEdits(SortedSet<Integer> replacementAddresses) {
-		// TODO: check replacementAddresses.size() against table "capacity" in some meaningful way
-
+	List<OverwriteEdit> produceEdits(SortedSet<Integer> replacementAddresses) {
 		if (replacementAddresses.equals(originalAddresses)) {
-			return Collections.emptySet();
+			return Collections.emptyList();
 		}
 
 		List<OverwriteEdit> edits = new ArrayList<>();
