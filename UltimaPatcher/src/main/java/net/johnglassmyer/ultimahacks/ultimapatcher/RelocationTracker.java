@@ -69,13 +69,14 @@ class RelocationTracker {
 
 		int loadModuleStartInFile = executable.loadModule.mzHeader.loadModuleStartInFile();
 
-		loadModuleEdits.forEach(edit -> {
-			if (loadModuleStartInFile < edit.getStart() + edit.length()) {
-				throw new IllegalStateException(String.format(
-						"relocation table edit %s for load module overlaps load module at %X",
-						edit,
-						loadModuleStartInFile));
-			}
+		loadModuleEdits.stream()
+				.filter(edit -> loadModuleStartInFile < edit.getStart() + edit.length())
+				.findFirst()
+				.ifPresent(edit -> {
+			throw new IllegalStateException(String.format(
+					"relocation table edit %s for load module overlaps load module at %X",
+					edit,
+					loadModuleStartInFile));
 		});
 
 		return loadModuleEdits;
