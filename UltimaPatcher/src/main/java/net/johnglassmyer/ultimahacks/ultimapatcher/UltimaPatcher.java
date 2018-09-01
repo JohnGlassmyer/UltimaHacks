@@ -102,12 +102,19 @@ public class UltimaPatcher {
 					.withRequiredArg();
 
 			OptionSpec<String> fileToSegmented = optionParser.accepts("file-to-segmented")
+					.availableIf(exe)
 					.availableUnless(listRelocations, patch, hackProto)
 					.withRequiredArg();
 
 			OptionSpec<String> segmentedToFile = optionParser.accepts("segmented-to-file")
+					.availableIf(exe)
 					.availableUnless(listRelocations, patch, hackProto, fileToSegmented)
 					.withRequiredArg();
+
+			OptionSpec<Void> produceSegmentsAsm = optionParser.accepts("produce-segments-asm")
+					.availableIf(exe)
+					.availableUnless(
+							listRelocations, patch, hackProto, fileToSegmented, segmentedToFile);
 
 			OptionSet optionSet = optionParser.parse(args);
 
@@ -124,7 +131,8 @@ public class UltimaPatcher {
 					optionSet.valueOfOptional(writeHackProto),
 					optionSet.valueOfOptional(hackComment),
 					optionSet.valuesOf(fileToSegmented),
-					optionSet.valuesOf(segmentedToFile));
+					optionSet.valuesOf(segmentedToFile),
+					optionSet.has(produceSegmentsAsm));
 		}
 
 		final Optional<Path> exe;
@@ -140,6 +148,7 @@ public class UltimaPatcher {
 		final Optional<String> hackComment;
 		final List<String> fileToSegmented;
 		final List<String> segmentedToFile;
+		final boolean produceSegmentsAsm;
 
 		private Options(
 				Optional<Path> exe,
@@ -154,7 +163,8 @@ public class UltimaPatcher {
 				Optional<Path> writeHackProto,
 				Optional<String> hackComment,
 				List<String> fileToSegmented,
-				List<String> segmentedToFile) {
+				List<String> segmentedToFile,
+				boolean produceSegmentsAsm) {
 			this.exe = exe;
 			this.listRelocations = listRelocations;
 			this.showOverlayProcs = showOverlayProcs;
@@ -168,6 +178,7 @@ public class UltimaPatcher {
 			this.hackComment = hackComment;
 			this.fileToSegmented = fileToSegmented;
 			this.segmentedToFile = segmentedToFile;
+			this.produceSegmentsAsm = produceSegmentsAsm;
 		}
 	}
 
@@ -202,7 +213,11 @@ public class UltimaPatcher {
 				.map(uncheckIoFunction(UltimaPatcher::readPatchFile))
 				.collect(Collectors.toList());
 
-		if (options.exe.isPresent()) {
+		if (options.produceSegmentsAsm) {
+			options.exe.map(uncheckIoFunction(Executable::readFromFile)).ifPresent(executable -> {
+				executable.produceSegmentsAsm();
+			});
+		} else if (options.exe.isPresent()) {
 			Path exePath = options.exe.get();
 
 			ImmutableList.Builder<Edit> editsBuilder = ImmutableList.builder();
