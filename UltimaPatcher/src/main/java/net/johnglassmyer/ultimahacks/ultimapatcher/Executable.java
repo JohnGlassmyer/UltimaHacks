@@ -1,5 +1,6 @@
 package net.johnglassmyer.ultimahacks.ultimapatcher;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.stream.IntStream.range;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -238,7 +239,9 @@ class Executable {
 		});
 	}
 
-	List<Edit> expandOverlay(int segmentIndex, int newOverlayLength) {
+	List<Edit> expandOverlay(int segmentIndex, int newOverlayLength, int eopSpacing) {
+		checkArgument(eopSpacing > 0, "eop spacing must be greater than zero");
+
 		if (segmentIndex > segments.size()) {
 			throw new PatchApplicationException(
 					String.format("No segment %d in executable", segmentIndex));
@@ -302,11 +305,14 @@ class Executable {
 			newOverlayCodeStart = fileLength;
 		}
 
+		/*
+		 * Place the new procedure entry points within the added length of the overlay, spaced the
+		 * specified number of bytes apart.
+		 */
 		L.info("  New procs (stub proc -> overlay proc):");
 		List<Integer> procStartsInOverlay = new ArrayList<>();
-		// Space the added procs at 0x100-byte intervals in the overlay code segment.
 		for (int iAddedProc = 0; iAddedProc < addedProcCount; iAddedProc++) {
-			int procStartInOverlay = stub.codeSize + iAddedProc * 0x100;
+			int procStartInOverlay = stub.codeSize + iAddedProc * eopSpacing;
 			procStartsInOverlay.add(procStartInOverlay);
 			int stubProcOffset =
 					OverlayStub.HEADER_LENGTH + (stub.procs.size() + iAddedProc) * StubProc.LENGTH;

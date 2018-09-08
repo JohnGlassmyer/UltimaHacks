@@ -49,6 +49,8 @@ import net.johnglassmyer.ultimahacks.ultimapatcher.Segment.Patchable;
  * existing in patched bytes.
  */
 public class UltimaPatcher {
+	private static final int DEFAULT_EOP_SPACING = 0x100;
+
 	static class Options {
 		private static final PathConverter EXISTING_FILE_PATH_CONVERTER =
 				new PathConverter(PathProperties.FILE_EXISTING);
@@ -68,6 +70,11 @@ public class UltimaPatcher {
 
 			OptionSpec<String> expandOverlay = optionParser.accepts("expand-overlay")
 					.availableIf(exe)
+					.withRequiredArg()
+					.ofType(String.class);
+
+			OptionSpec<String> eopSpacing = optionParser.accepts("eop-spacing")
+					.availableIf(expandOverlay)
 					.withRequiredArg()
 					.ofType(String.class);
 
@@ -124,6 +131,7 @@ public class UltimaPatcher {
 					optionSet.has(showOverlayProcs),
 					optionSet.has(ignoreExeLength),
 					optionSet.valuesOf(expandOverlay),
+					optionSet.valueOfOptional(eopSpacing),
 					optionSet.valuesOf(patch),
 					optionSet.has(showPatchBytes),
 					optionSet.valueOfOptional(hackProto),
@@ -140,6 +148,7 @@ public class UltimaPatcher {
 		final boolean showOverlayProcs;
 		final boolean ignoreExeLength;
 		final List<String> expandOverlay;
+		final Optional<String> eopSpacing;
 		final List<Path> patch;
 		final boolean showPatchBytes;
 		final Optional<Path> hackProto;
@@ -156,6 +165,7 @@ public class UltimaPatcher {
 				boolean showOverlayProcs,
 				boolean ignoreExeLength,
 				List<String> expandOverlay,
+				Optional<String> eopSpacing,
 				List<Path> patch,
 				boolean showPatchBytes,
 				Optional<Path> hackProto,
@@ -170,6 +180,7 @@ public class UltimaPatcher {
 			this.showOverlayProcs = showOverlayProcs;
 			this.ignoreExeLength = ignoreExeLength;
 			this.expandOverlay = expandOverlay;
+			this.eopSpacing = eopSpacing;
 			this.patch = patch;
 			this.showPatchBytes = showPatchBytes;
 			this.hackProto = hackProto;
@@ -231,8 +242,8 @@ public class UltimaPatcher {
 
 				originalExeLength = originalExecutable.fileLength;
 
-				ExecutableEditState expandedExecutableState =
-						withExpandedOverlays(originalExecutable, options.expandOverlay);
+				ExecutableEditState expandedExecutableState = withExpandedOverlays(
+						originalExecutable, options.expandOverlay, options.eopSpacing);
 				executable = expandedExecutableState.executable;
 
 				editsBuilder.addAll(expandedExecutableState.accumulatedEdits);
@@ -428,12 +439,15 @@ public class UltimaPatcher {
 	}
 
 	private static ExecutableEditState withExpandedOverlays(
-			Executable executable, List<String> expandOverlayArgs) {
+			Executable executable, List<String> expandOverlayArgs, Optional<String> eopSpacingArg) {
+		int eopSpacing = eopSpacingArg.map(Integer::decode).orElse(DEFAULT_EOP_SPACING);
+
 		ExecutableEditOperation expandOverlaysOperation = expandOverlayArgs.stream()
 				.map(SegmentAndOffset::fromString)
 				.map(address -> (ExecutableEditOperation) new ExpandOverlayOperation(
 						address.segmentIndex,
 						address.offset,
+						eopSpacing,
 						uncheckIoBiFunction(UltimaPatcher::applyEditsInMemory)))
 				.reduce(state -> state, (op1, op2) -> op1.andThen(op2));
 
