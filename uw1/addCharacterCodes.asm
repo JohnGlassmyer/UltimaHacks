@@ -11,16 +11,16 @@
 startPatch EXE_LENGTH, \
 		add character codes for Shift / Ctrl / Alt keys
 		
-	; insertCharacterMapping scancode, character
-	%macro insertCharacterMapping 2
-		startBlockAt addr_asciiForScancodeTable + %1
+	; setCharacterMapping scancode, character
+	%macro setCharacterMapping 2
+		startBlockAt seg_asciiForScancodeTable, off_asciiForScancodeTable + %1
 			db %2
 		endBlockOfLength 1
 	%endmacro
 	
 	%assign i 0
 	%rep mappedCharacterCount
-		insertCharacterMapping scancode_%[i], character_%[i]
+		setCharacterMapping scancode_%[i], character_%[i]
 		
 		%assign i i+1
 	%endrep

@@ -1,4 +1,6 @@
 %macro startPatch 2
+	%push patch
+	
 	%assign patch_targetFileLength %1
 	%defstr patch_description %2
 	%strlen patch_descriptionLength patch_description
@@ -6,38 +8,37 @@
 %endmacro
 
 %macro startBlockAt 2
+	%push block
+	
 	%assign block_segmentIndex %1
 	%assign block_startOffset %2
 	%assign block_relativeStart ($ - $$)
 	%assign block_relocationCount 0
+	
+	; a unique non-local label at the start of the block
+	;   to enable local labels within the block
+	startOfBlock_ %+ block_segmentIndex %+ _ %+ block_startOffset:
 %endmacro
 
 %define block_currentRelativePosition (($ - $$) - block_relativeStart)
 
+%define block_currentOffset (block_startOffset + block_currentRelativePosition)
+
 ; inserts metadata regarding the preceding block of code
 ; (absolute start address and relocation sites)
-%macro endBlockWithFillAt 2
-	%assign block_endOffset %2
+%macro endBlock 0
+	%assign %%length block_currentRelativePosition
+	%assign %%endOffset block_currentOffset
 	
-	%if block_endOffset > 0x10000
+	%if %%endOffset > 0x10000
 		%error block runs beyond offset 0xFFFF
 	%endif
 	
-	%assign block_codeLength block_currentRelativePosition
-	%assign block_totalLength block_endOffset - block_startOffset
-	
-	; fill remainder of patched block
-	%assign block_fillLength block_totalLength - block_codeLength
-	%if block_fillLength < 0
-		%error block overrun
-	%endif
-	times block_fillLength %1
-	
-	dd block_totalLength
+	dd %%length
 	
 	%rep block_relocationCount
 		dd %$relocationBase + %$relocationOffset - block_relativeStart
-	%pop blockRelocationContext
+		%pop blockRelocationContext
 	%endrep
 	
 	dd block_relocationCount
@@ -47,29 +48,44 @@
 	
 	%assign patch_blockCount patch_blockCount + 1
 	
-	%assign lastBlock_endOffset block_endOffset
+	%assign lastBlock_endOffset %%endOffset
+	
+	%pop block
 %endmacro
 
 %macro endBlockOfLength 1
-	%assign endBlockOfLength_pos block_currentRelativePosition
+	%assign %%expectedLength %1
+	%assign %%actualLength block_currentRelativePosition
 	
-	%if %1 != endBlockOfLength_pos
-		%error block length expected to be %1, but is endBlockOfLength_pos
+	%if %%actualLength != %%expectedLength
+		%error block length: %%actualLength, expected: %%expectedLength
 	%endif
 	
-	endBlockAt block_startOffset + %1
+	endBlock
+%endmacro
+
+%macro endBlockWithFillAt 2
+	%define %%fillByte %1
+	%assign %%expectedEndOffset %2
+	
+	%assign %%fillLength %%expectedEndOffset - block_currentOffset
+	
+	%if %%fillLength < 0
+		%error block overrun
+	%elifenv 'BLOCK_SIZING_HINTS'
+		%assign %%length block_currentRelativePosition
+		%warning block length: %%length fillLength: %%fillLength
+	%endif
+	
+	times %%fillLength %%fillByte
+	
+	endBlock
 %endmacro
 
 %macro endBlockAt 1
-	endBlockWithFillAt hlt, %1
-%endmacro
-
-%macro endBlockWithFill 1
-	endBlockWithFillAt %1, block_startOffset + block_currentRelativePosition
-%endmacro
-
-%macro endBlock 0
-	endBlockWithFill hlt
+	%assign %%expectedEndOffset %1
+	
+	endBlockWithFillAt nop, %%expectedEndOffset
 %endmacro
 
 %macro endPatch 0
@@ -77,12 +93,13 @@
 	dd patch_targetFileLength
 	db patch_description
 	dd patch_descriptionLength
+	
+	%pop patch
 %endmacro
 
 ; calculates the delta to a location within the same segment \
 ;	but outside of the local patch block
-%define calcJump(targetOffset) \
-		$ + (targetOffset - block_startOffset - block_currentRelativePosition)
+%define calcJump(targetOffset) ($ + (targetOffset - block_currentOffset))
 		
 ; callWithRelocation 0xssss:0xoooo
 ; makes note of the site to be included in relocation metadata
@@ -124,8 +141,8 @@
 ; defineAddress segmentIndex, offset, name
 %macro defineAddress 3
 	%assign seg_%[%3]                   %1
-	%assign segmentFromOverlay_%[%3]    segmentFromOverlay_%[%1]
-	%assign segmentFromLoadModule_%[%3] segmentFromLoadModule_%[%1]
+	%define segmentFromOverlay_%[%3]    segmentFromOverlay_%[%1]
+	%define segmentFromLoadModule_%[%3] segmentFromLoadModule_%[%1]
 	%assign off_%[%3]                   %2
 	
 	%define addr_%[%3] seg_%[%3], off_%[%3]
