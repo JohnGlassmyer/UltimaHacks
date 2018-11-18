@@ -131,7 +131,7 @@ startPatch EXE_LENGTH, \
 			dKey 7,   0x95, moveCursor,   0x95 ; (numeric keypad)
 			dKey 7,   0x96, moveCursor,   0x96 ; (numeric keypad)
 			
-			dKey 27, A|0x86, printVersion,    0 ; Alt+F7
+			dKey 27, A|0x86, byteArgEopDispatcher, byteArgEopArg(printVersion, 0) ; Alt+F7
 			dKey 27, A|0x87, printDebug,      0 ; Alt+F8
 		keyBindings_end:
 		

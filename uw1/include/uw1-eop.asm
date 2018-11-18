@@ -40,6 +40,7 @@ eopProc 0x0E0, interactAtCursor
 eopProc 0x060, mapControl
 eopProc 0x110, moreBindings
 eopProc 0x0D0, mouseLookOrMoveCursor
+eopProc 0x0A0, printVersion
 eopProc 0x0D0, runeKey
 eopProc 0x060, setInterfaceMode
 eopProc 0x0C0, setMouseLookState
