@@ -1,4 +1,14 @@
 # Ultima Hacks
+
+* [Overview](#overview)
+* [Ultima VII: The Black Gate](#ultima-vii-the-black-gate)
+* [Ultima Underworld: The Stygian Abyss, Ultima Underworld II: Labyrinth of Worlds](
+    #ultima-underworld-the-stygian-abyss)
+* [How to Apply the Patches](#how-to-apply-the-patches)
+* [How to Build the Patches (Advanced)](#how-to-build-the-patches-advanced)
+* [More about UltimaPatcher](#more-about-ultimapatcher)
+
+## Overview
 Some modifications to the video games _Ultima VII: The Black Gate_ (1992),
 _Ultima Underworld: The Stygian Abyss_ (1992), and _Ultima Underworld II:
 Labyrinth of Worlds_ (1993), written as bits of (mostly 16-bit) x86 assembly,
