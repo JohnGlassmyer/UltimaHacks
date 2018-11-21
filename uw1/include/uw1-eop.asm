@@ -39,7 +39,8 @@ eopProc 0x030, flipToPanel
 eopProc 0x0E0, interactAtCursor
 eopProc 0x060, mapControl
 eopProc 0x110, moreBindings
-eopProc 0x0D0, mouseLookOrMoveCursor
+eopProc 0x0F0, mouseLookOrMoveCursor
+eopProc 0x080, orientMouseLook
 eopProc 0x0A0, printVersion
 eopProc 0x0D0, runeKey
 eopProc 0x060, setInterfaceMode

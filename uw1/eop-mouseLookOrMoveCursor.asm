@@ -31,6 +31,12 @@ startPatch EXE_LENGTH, \
 				jz xZero
 				mov ax, word [bp+arg_mouseXDelta]
 				shl ax, 6
+				
+				test byte [dseg_mouseLookOrientation], MOUSE_LOOK_INVERT_X
+				jz afterInvertX
+				neg ax
+				afterInvertX:
+				
 				add word [dseg_heading], ax
 				
 				xZero:
@@ -40,6 +46,12 @@ startPatch EXE_LENGTH, \
 				jz yZero
 				mov ax, word [bp+arg_mouseYDelta]
 				shl ax, 7
+				
+				test byte [dseg_mouseLookOrientation], MOUSE_LOOK_INVERT_Y
+				jz afterInvertY
+				neg ax
+				afterInvertY:
+				
 				sub word [dseg_pitch], ax
 				
 				cmp word [dseg_pitch], pitchBound

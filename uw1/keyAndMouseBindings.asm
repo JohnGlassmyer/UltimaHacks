@@ -64,6 +64,8 @@ startPatch EXE_LENGTH, \
 			dKey 1, 'f', byteArgEopDispatcher, byteArgEopArg(flipToPanel, 2)
 			
 			dKey 1, '`', byteArgEopDispatcher, byteArgEopArg(toggleMouseLook, 0)
+			dKey 1, A|'`', byteArgEopDispatcher, byteArgEopArg(orientMouseLook, 0)
+			
 			dKey 1, 'q', byteArgEopDispatcher, byteArgEopArg(interactAtCursor, 1) ; look
 			dKey 1, 'e', byteArgEopDispatcher, byteArgEopArg(interactAtCursor, 0) ; use
 			
@@ -136,7 +138,7 @@ startPatch EXE_LENGTH, \
 		keyBindings_end:
 		
 		; bytes reclaimed from the oblivion of inefficiency
-		times 428 nop
+		times 418 nop
 		
 	endBlockWithFillAt nop, off_bindsEnd
 endPatch

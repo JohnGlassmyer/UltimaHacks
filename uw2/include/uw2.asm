@@ -37,6 +37,7 @@ dseg_trigScale                          EQU 0x0018
 dseg_radianAngle                        EQU 0x001C
 dseg_autoAttackType                     EQU 0x0020
 dseg_haveWarnedAboutDrawQueueLimit      EQU 0x0021
+dseg_mouseLookOrientation               EQU 0x0022
 
 dseg_avatarMovementFlags                EQU 0x00D2
 dseg_pn_inputState                      EQU 0x00E4
@@ -294,3 +295,6 @@ ShiftStates_ctrl                        EQU 2
 %assign C 0x100 ; Ctrl modifier bit
 %assign A 0x200 ; Alt modifier bit
 %assign H 0x400 ; High-bit scancode modifier bit
+
+%assign MOUSE_LOOK_INVERT_Y 1
+%assign MOUSE_LOOK_INVERT_X 2

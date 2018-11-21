@@ -23,7 +23,8 @@ startPatch EXE_LENGTH, \
 	zeroBytesInDseg 1, dseg_wasLastBindingKey
 	zeroBytesInDseg 2, dseg_pn_lastKeyOrMouseBinding
 	zeroBytesInDseg 4, dseg_lastKeyBindingTime
-	zeroBytesInDseg 2, dseg_haveWarnedAboutDrawQueueLimit
+	zeroBytesInDseg 1, dseg_haveWarnedAboutDrawQueueLimit
+	zeroBytesInDseg 1, dseg_mouseLookOrientation
 	
 	startBlockAt seg_dseg, dseg_newlineString
 		db `\n`, 0
