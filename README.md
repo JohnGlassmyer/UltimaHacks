@@ -110,6 +110,7 @@ Things made more convenient:
 A number of **keys** have been added or changed. The most important:
 
     ` (Backquote): toggle mouse-look
+            Alt+`: invert mouse-look axes (cycles through 4 states)
              wasd: movement, typical of modern shooters
             Space: attack (using last attack type, or slash)
             Shift: jump
