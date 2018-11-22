@@ -1,7 +1,8 @@
 # Ultima Hacks
 
 * [Overview](#overview)
-* [Ultima VII: The Black Gate](#ultima-vii-the-black-gate)
+* [Ultima VII: The Black Gate, Ultima VII Part Two: Serpent Isle](
+    #ultima-vii-the-black-gate)
 * [Ultima Underworld: The Stygian Abyss, Ultima Underworld II: Labyrinth of Worlds](
     #ultima-underworld-the-stygian-abyss)
 * [How to Apply the Patches](#how-to-apply-the-patches)
@@ -31,64 +32,110 @@ on original (386/486) hardware as well (though I haven't had a chance to
 test the patches on original hardware).
 
 ## Ultima VII: The Black Gate
+## Ultima VII Part Two: Serpent Isle
 Changes focus on improving usability - allowing the player to do things
 more easily or more directly - and on adding keyboard control to what was
 a largely mouse-driven game.
 
-For one thing, **dialogs** have been made more controllable:
-* most dialogs can be closed by right clicking
-* the Save dialog allows selecting save slots with number or arrow keys
-* quantity slider controls can be adjusted with arrow keys, Shift, and Enter.
+#### New abilities
 
-To facilitate inventory management, **bags and backpacks** are now treated as
-flexible, meaning that they can be placed inside of each other, depending on
-the bulk of their contents.
+- **Keep moving** in the same direction by pressing `q` or `Q`.
+  - Press either key subsequently to change speed (walk, run, sprint, stop).
 
-Beyond that, a number of **key commands** have been added. For interacting
-with items:
+- Place a **bag or backpack** more easily within another, as each is now
+  considered a *flexible* container, with volume corresponding to the
+  sum of its contents, rather than being of a fixed size.
 
-                k: find and use the key for a door or chest
-                       (emulates the keyring of Serpent Isle)
-                t: target item (to use or to attack)
-                f: use food
-                m: use map
-                b: use spellbook
-                o: use Orb of the Moons
-                p: use lockpicks
-                w: use pocketwatch
-                x: use sextant
-                g: use abacus (count party gold)
+- **Cast spells by key** in real-time:
+  - `/`: start casting
+  - `<letter>`: add rune
+  - `Backspace`: remove last rune
+  - `Enter`: cast selected runes
+  - (Hold `Shift` when opening or clicking the spellbook to see the rune-keys
+    of each spell.)
 
-**Party members** can be selected, in many contexts, with corresponding
-number keys:
+- Select **party members by number** in many contexts:
+  - `N`: open or target Nth party member
+  - `Shift+N`: open or target Nth party member's backpack
+  - `Alt+N`: open Nth party member's stats
+  - *drag item*+`N`: give dragged item to Nth party member
+  - Can be combined into compound actions:
+    - `t`, `2`: talk to 2nd party member
+    - `f`, `3`: feed 3rd party member
+    - *cast spell*, `4`: target 4th party member with a spell
+    - `t`, `g`, `g`, `2`: have 2nd party member get a nearby item
+	- `t`, `t`, `t`, `2`: have 2nd party member attack a nearby NPC (in combat mode)
 
-                N: open or target Nth party member
-          Shift+N: open or target Nth party member's backpack
-            Alt+N: display Nth party member's stats
-    <drag item>+N: give dragged item to Nth party member
+- (U7BG) **Target** with crosshairs, as in U7SI, with `t`.
 
-These keys can be combined:
+- **Use keys to talk, use, get, or attack** (while targeting with crosshairs)
+  - `t`: cycle NPCs
+  - `r`: cycle usable items
+  - `g`: cycle gettable items
+  - `a`: cycle all items
+  - `Enter`: select, use, talk, get, or attack with entire party
+  - `N`: attack or get with Nth party member
+  - `Esc`: cancel targeting
+  
+- **Select and use items**. (Originally available only in U7SI, without
+  open dialogs; now available in U7BG and U7SI and even with open dialogs.)
+  - `k`: find and use the key for a door or chest (emulating U7SI's keyring)
+  - `f`: use food
+  - `m`: use world map
+  - `b`: use spellbook(s)
+  - `p`: use lockpicks
+  - `w`: use pocketwatch
+  - `x`: use sextant
+  - `g`: use abacus (to count party gold)
+  - `o`: use Orb of the Moons (U7BG)
+  - `j`: use Serpent Jawbone (U7SI)
 
-               t, 2: talk to the 2nd party member
-               f, 3: feed the 3rd party member
-    <cast spell>, 4: target the 4th party member with a spell
+- Query items' **weight, volume, and contents**:
+  - `Shift+click`: show item weight
+  - `Ctrl+click`: show item volume
+  - `Alt+click`: show a container's first contained item
+  - `Alt+click`: show a magic scroll's spell (U7SI)
 
-**Spells** can be selected and cast by typing their runes in real-time:
+- **Control conversations with keys**
+  - `←→↑↓`, `Tab`, `Shift+Tab`: move cursor among options
+  - `Enter`, `Ctrl`, `Space`: advance text; select option at cursor
+    - These keys also advance the text of **books, scrolls, and signs**.
 
-                /: start casting
-         <letter>: add rune
-        Backspace: remove last rune
-            Enter: cast selected runes
-           
-**Item weight and volume** can be queried:
+- Control **dialogs** more easily:
+  - close most dialogs by right-clicking
+  - select slots on the Save dialog with number keys or `↑↓`
+  - select quantities with `←→`, `Shift+←→`, `↑↓`, and `Enter`.
 
-      Shift+click: show item weight
-       Ctrl+click: show item bulk/volume
+- Use additional **keys in key-mouse mode** (initiated with `Space`):
+  - `Tab`: cycle inventories
+  - `Space`: stop key-mouse
+  - `Esc`: stop key-mouse, close inventories
 
-And cheats can be enabled or disabled in-game by pressing `Alt+\`.
+- **Toggle cheats** in-game by pressing `Alt+Backslash`.
 
-Finally, some overwhelmingly loud or frequent background sounds (such as the
-flickering of fire swords) are silenced or attenuated.
+- Press `Alt+k` in game, or click the image below, to see a comprensive,
+  multi-page listing of **mouse and keyboard controls**.
+
+  [![controls list](ultimahacks-u7-controls-preview.png)](
+    https://raw.githubusercontent.com/JohnGlassmyer/UltimaHacks/master/ultimahacks-u7-controls.png)
+
+#### Other changes
+
+- (U7SI) The Dark Path map is now labeled with the names of destinations
+  corresponding to held serpent teeth.
+
+- The background is now darkened during conversation, to increase contrast
+  and enhance the readability of text.
+
+- (U7SI) The game no longer crashes if the player tries to open Combat Status
+  with more than six party members.
+
+- Some overwhelmingly loud or frequent background sounds (such as the
+  flickering of fire swords) have been silenced or attenuated.
+
+- The cheat-menu ability to set and inspect Game Flags has been restored.
+
+- The fault address is now printed on a fatal divide-by-zero error.
 
 ## Ultima Underworld: The Stygian Abyss
 ## Ultima Underworld II: Labyrinth of Worlds
