@@ -11,10 +11,10 @@
 
 ## Overview
 Some modifications to the video games _Ultima VII: The Black Gate_ (1992),
-_Ultima Underworld: The Stygian Abyss_ (1992), and _Ultima Underworld II:
-Labyrinth of Worlds_ (1993), written as bits of (mostly 16-bit) x86 assembly,
-together with a program, written in Java, that patches them into the game's
-executable.
+_Ultima VII Part Two: Serpent Isle_ (1993), _Ultima Underworld: The Stygian
+Abyss_ (1992), and _Ultima Underworld II: Labyrinth of Worlds_ (1993), written
+as bits of (mostly 16-bit) x86 assembly, together with a program, written in
+Java, that patches them into the game's executable.
 
 There is also a website (mentioned below) which can quickly apply pre-assembled
 versions of the patches, for people not interested in building the patches
@@ -196,7 +196,8 @@ Keys for navigating the **map**:
 
 These patches are intended to be applied to particular versions of the games,
 all as distributed by GOG.com:
-* Ultima VII 3.4
+* Ultima VII: The Black Gate 3.4
+* Ultima VII Part Two: Serpent Isle 1.02s5 Final
 * Ultima Underworld vF1.94S
 * Ultima Underworld II vF1.99S
 
@@ -205,8 +206,8 @@ the **Hack Applier website**:
 
 https://johnglassmyer.github.io/UltimaHacks/
 
-To use the website, select the game executable file (U7.EXE, UW.EXE, or
-UW2.EXE) from your installation of the game, select the corresponding "hack"
+To use the website, select the game executable file (U7.EXE, SI.EXE, UW.EXE,
+or UW2.EXE) from your installation of the game, select the corresponding "hack"
 for that game from the drop-down, and then click the "Apply" button to save
 a patched copy of the executable, with which you can replace the original
 file in your installation of the game.
