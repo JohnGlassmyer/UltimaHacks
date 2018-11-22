@@ -103,11 +103,11 @@ a largely mouse-driven game.
 
 - Control **dialogs** more easily:
   - close most dialogs by right-clicking
+  - cycle open inventories with `Tab`
   - select slots on the Save dialog with number keys or `↑↓`
   - select quantities with `←→`, `Shift+←→`, `↑↓`, and `Enter`.
 
 - Use additional **keys in key-mouse mode** (initiated with `Space`):
-  - `Tab`: cycle inventories
   - `Space`: stop key-mouse
   - `Esc`: stop key-mouse, close inventories
 
