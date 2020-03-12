@@ -1,5 +1,9 @@
 *.o
 *.lst
-*.sh
 ultimaPatcher.log
+
+patchingVariables.sh
+
+*.hack
+!/compiled-hacks/*.hack
 
