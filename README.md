@@ -240,36 +240,42 @@ path.
 On Windows systems, [Git for Windows](https://gitforwindows.org/) provides
 a Bash shell capable of processing the example commands given.
 
-The patch sources can be assembled to `.o` binaries by invoking NASM in the
-`ultima7`, `uw1`, or `uw2` directory:
-
-`for a in *.asm ; do nasm $a -o ${a/.asm/.o} ; done`
-
 The Java program _UltimaPatcher_ must be built by invoking Maven in the
 `UltimaPatcher` directory:
 
-`mvn compile package`
+```
+UltimaHacks/UltimaPatcher$ mvn compile package
+```
 
-Applying the patches requires that a particular overlay-segment of the game's
-executable (U7.EXE, UW.EXE, or UW2.EXE) first be expanded to provide room for
-several new procedures (this increases the executable's size by a few kilobytes).
-This is the first task to be performed by the Java project built in the previous
-step (`UltimaPatcher.jar` should be found in the `target` directory):
+This should ultimately build a file `UltimaPatcher/target/UltimaPatcher.jar`.
 
-`java -jar UltimaPatcher.jar --exe=U7.EXE --expand-overlay=343:0x2000 --write-to-exe`
+The script `scripts/patchFreshExe.sh` performs the remaining steps necessary to
+build and apply patches to the game executable:
+* make a copy of the original executable as the target executable to be patched
+* delete any previously assembled patch binaries (`*.o`)
+* assemble (using NASM) the patch sources (`*.asm`) to binaries (`*.o`)
+* compile (using the _UltimaPatcher_ program built above) a hack proto containing
+  all edits to be made to the game executable, including expanding overlay code
+  segments to make room for new code
+* delete assembled patch binaries
+* apply (again using _UltimaPatcher_) the hack proto to the game executable
 
-`java -jar UltimaPatcher.jar --exe=UW.EXE --expand-overlay=117:0x2200 --write-to-exe`
+First, configure this script by editing `patchingVariables.sh` in the game's
+patches directory to set the correct paths to the original, unmodified executable
+(`ORIGINAL_EXE`) and the destination for the patched executable (`TARGET_EXE`).
 
-`java -jar UltimaPatcher.jar --exe=UW2.EXE --expand-overlay=93:0x2500 --write-to-exe`
+E.g. in `u7bg/patchingVariables.sh`:
+```
+...
+ORIGINAL_EXE=path/to/U7.EXE-original
+TARGET_EXE=path/to/U7.EXE
+...
+```
 
-Finally, _UltimaPatcher_ must be invoked again to apply the .o patches to each
-executable. For example:
-
-`for o in ultima7/*.o ; do java -jar UltimaPatcher.jar --exe=U7.EXE --patch=$o ; done`
-
-`for o in uw1/*.o ; do java -jar UltimaPatcher.jar --exe=UW.EXE --patch=$o ; done`
-
-`for o in uw2/*.o ; do java -jar UltimaPatcher.jar --exe=UW2.EXE --patch=$o ; done`
+Then, from the game's patches directory, run the script to build and apply the patches, e.g.:
+```
+UltimaHacks/u7bg$ ../scripts/patchFreshExe.sh *.asm
+```
 
 ## More about UltimaPatcher
 
