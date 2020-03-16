@@ -135,6 +135,9 @@ a largely mouse-driven game.
 
 - The cheat-menu ability to set and inspect Game Flags has been restored.
 
+- (U7BG) The cheat ability to press Alt+6 and choose a specific music track
+  to play, originally available in U7SI, has been added.
+
 - The fault address is now printed on a fatal divide-by-zero error.
 
 ## Ultima Underworld: The Stygian Abyss
