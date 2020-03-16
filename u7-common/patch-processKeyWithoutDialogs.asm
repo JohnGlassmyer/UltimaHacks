@@ -131,7 +131,8 @@ startPatch EXE_LENGTH, processKeyWithoutDialogs
 			callVarArgsEopFromLoadModule toggleCheats, 0
 			jmp calcJump(off_afterKeyHandlers)
 			
-		times 127 nop
+		gameSpecificKeyMappingCode
+		
 	endBlockAt off_keyMappingCode_end
 	
 	;-----------------------------------------------------------
@@ -200,6 +201,6 @@ startPatch EXE_LENGTH, processKeyWithoutDialogs
 			
 			responsiveAvatarActionMappingEnd:
 			
-		times 76 nop
+		times 72 nop
 	endBlockAt off_actionMappingTable_end
 endPatch

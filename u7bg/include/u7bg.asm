@@ -118,6 +118,7 @@ defineAddress   0, 0x1468, sprintf
 defineAddress   0, 0x2A4D, strcat
 defineAddress   0, 0x31B5, deallocateNearMemory
 defineAddress   0, 0x31ED, allocateNearMemory
+defineAddress   0, 0x40FA, strcpy_far
 defineAddress   0, 0x4183, strncat_far
 
 defineAddress   5, 0x07A4, ShapeManager_draw
@@ -178,6 +179,8 @@ defineAddress  64, 0x000C, reportNoCanDo
 defineAddress  68, 0x0220, continuePlayingSpeech
 
 defineAddress  70, 0x0040, getItemInSlot
+
+defineAddress  71, 0x0256, playMusic
 
 defineAddress  75, 0x0009, compareWorldCoords
 

@@ -66,4 +66,8 @@ defineAddress 22, 0x13E9, actionMappingTable_end
 %define reg_pn_stepsRemaining si
 %define reg_keyCode di
 
+%macro gameSpecificKeyMappingCode 0
+	; none
+%endmacro
+
 %include "../u7-common/patch-processKeyWithoutDialogs.asm"
