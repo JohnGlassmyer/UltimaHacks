@@ -54,12 +54,6 @@ defineAddress 31, 0x0F77, actionMappingTable_end
 
 %macro gameSpecificKeyMappingCode 0
 	%assign off_cheat_alt6 block_currentOffset
-		jmp prompt_end
-		prompt:
-			db "Music # (-1 to stop)", 0
-			prompt_end:
-			%assign prompt_length (prompt_end - prompt)
-
 		push si
 
 		push prompt_length
@@ -82,11 +76,20 @@ defineAddress 31, 0x0F77, actionMappingTable_end
 		callFromLoadModule playMusic
 		pop cx
 
+		push si
+		callFromLoadModule deallocateNearMemory
+		pop cx
+
 		pop si
 
 		jmp calcJump(off_afterKeyHandlers)
 
-		times 61 nop
+		prompt:
+			db "Music # (-1 to stop)", 0
+			prompt_end:
+			prompt_length equ (prompt_end - prompt)
+
+		times 56 nop
 %endmacro
 
 %include "../u7-common/patch-processKeyWithoutDialogs.asm"
