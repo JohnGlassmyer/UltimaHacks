@@ -138,6 +138,9 @@ a largely mouse-driven game.
 - (U7BG) The cheat ability to press Alt+6 and choose a specific music track
   to play, originally available in U7SI, has been added.
 
+- (U7BG) The frame limiter toggleable with Alt+8, originally available in U7SI,
+  has been added.
+
 - (U7BG) Calculating the elapsed number of hours on a timer for Usecode now uses
   absolute day number (as in U7SI) rather than day-of-the-week; this fixes the bug
   where Jaana would not be able to heal again even after waiting the required 5 hours.
