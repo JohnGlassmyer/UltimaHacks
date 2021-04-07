@@ -52,4 +52,12 @@ startPatch EXE_LENGTH, initializeDsegBytes
 	startBlockAt seg_dseg, dseg_flagNumberPromptString
 		db 'Flag number?', 0
 	endBlockOfLength 13
+
+	startBlockAt seg_dseg, dseg_frameLimiterEnabled
+		db 1
+	endBlock
+
+	startBlockAt seg_dseg, dseg_prevFrameTime
+		dw 0
+	endBlock
 endPatch

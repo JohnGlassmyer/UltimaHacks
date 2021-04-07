@@ -14,8 +14,8 @@ startPatch EXE_LENGTH, eop1-entryPoints
 	endBlockOfLength 5
 	
 	startBlockAt addr_eop1_entry3
-		retf
+		jmp calcJump(off_eop1_frameLimiter)
 		
-		times 4 nop
+		times 2 nop
 	endBlockOfLength 5
 endPatch

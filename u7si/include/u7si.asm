@@ -71,6 +71,8 @@
 %assign dseg_autorouteIbo                       0x178D
 %assign dseg_partyMemberIbos                    0x1E43
 %assign dseg_partySize                          0x1E73
+%assign dseg_frameLimiterEnabled                0x208A
+%assign dseg_prevFrameTime                      0x208B
 %assign dseg_reagentCountForSpell               0x20A9
 %assign dseg_spriteManager                      0x20F2
 %assign dseg_yellowTextPrinter                  0x21B0

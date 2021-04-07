@@ -111,6 +111,14 @@
 	%assign block_relocationCount block_relocationCount + 1
 %endmacro
 
+%macro jmpWithRelocation 1
+	%push blockRelocationContext
+	%assign %$relocationOffset 3
+	%$relocationBase:
+	jmp %1
+	%assign block_relocationCount block_relocationCount + 1
+%endmacro
+
 %macro pushWithRelocation 1
 	%push blockRelocationContext
 	%assign %$relocationOffset 1
@@ -153,9 +161,19 @@
 	callWithRelocation segmentFromOverlay_%[%1]:off_%[%1]
 %endmacro
 
+; jmpFromOverlay procName
+%macro jmpFromOverlay 1
+	jmpWithRelocation segmentFromOverlay_%[%1]:off_%[%1]
+%endmacro
+
 ; callFromLoadModule procName
 %macro callFromLoadModule 1
 	callWithRelocation segmentFromLoadModule_%[%1]:off_%[%1]
+%endmacro
+
+; jmpFromLoadModule procName
+%macro jmpFromLoadModule 1
+	jmpWithRelocation segmentFromLoadModule_%[%1]:off_%[%1]
 %endmacro
 
 %define offsetInCodeSegment(label) \

@@ -10,7 +10,7 @@ eopProc eop1, 0x005, entry2
 eopProc eop1, 0x005, entry3
 
 eopProc eop1, 0x040, varArgsDispatcher
-eopProc eop1, 0x050, dispatchTable
+eopProc eop1, 0x060, dispatchTable
 
 eopProc eop1, 0x040, barkOverItemInWorld
 eopProc eop1, 0x040, canItemAcceptItems
@@ -27,6 +27,7 @@ eopProc eop1, 0x1E0, ensureDragAndDropAreasInitialized
 eopProc eop1, 0x020, feed
 eopProc eop1, 0x080, findAllPartyItems
 eopProc eop1, 0x050, findPartyItem
+eopProc eop1, 0x040, frameLimiter
 eopProc eop1, 0x030, getItemZ
 eopProc eop1, 0x010, getKeyboardShiftBits
 eopProc eop1, 0x070, getPartyMemberIbo
@@ -45,5 +46,6 @@ eopProc eop1, 0x050, target
 eopProc eop1, 0x0A0, toggleAudio
 eopProc eop1, 0x080, toggleCheats
 eopProc eop1, 0x030, toggleCombat
+eopProc eop1, 0x090, toggleFrameLimiter
 eopProc eop1, 0x040, toggleMouseHand
 eopProc eop1, 0x060, usePartyItem
