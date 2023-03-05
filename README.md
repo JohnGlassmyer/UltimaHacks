@@ -180,6 +180,13 @@ Keys for **spell-casting**:
      Ctrl+Alt+Backspace: clear selected runes
          Ctrl+Alt+Space: cast the selected runes
 
+"Easy Move" actions:
+
+          Ctrl+Up: Easy Move Walk Forward
+        Ctrl+Left: Easy Move Left
+       Ctrl+Right: Easy Move Right
+        Ctrl+Down: Easy Move Backwards
+
 Some miscellaneous keys:
 
                 g: activate compass
