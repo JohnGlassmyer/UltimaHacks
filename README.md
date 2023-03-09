@@ -218,7 +218,7 @@ all as distributed by GOG.com:
 Pre-assembled patches can be applied to a game's executable in seconds with
 the **Hack Applier website**:
 
-https://johnglassmyer.github.io/UltimaHacks/
+https://johnglassmyer.github.io/UltimaHacks/patcher-site
 
 To use the website, select the game executable file (U7.EXE, SI.EXE, UW.EXE,
 or UW2.EXE) from your installation of the game, select the corresponding "hack"
