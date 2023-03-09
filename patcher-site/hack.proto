@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+package net.johnglassmyer.ultimahacks.proto;
+
+option java_outer_classname = "HackProto";
+
+message Hack {
+	repeated Edit edit = 1;
+	.google.protobuf.UInt32Value target_length = 2;
+	.google.protobuf.StringValue comment = 3;
+}
+
+message Edit {
+	oneof type {
+		InsertEdit insert = 1;
+		CopyEdit copy = 2;
+		OverwriteEdit overwrite = 3;
+	}
+}
+
+message InsertEdit {
+	uint32 start = 1;
+	uint32 length = 2;
+}
+
+message CopyEdit {
+	uint32 source = 1;
+	uint32 destination = 2;
+	uint32 length = 3;
+}
+
+message OverwriteEdit {
+	uint32 start = 1;
+	bytes data = 2;
+}

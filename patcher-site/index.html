@@ -1,0 +1,332 @@
+<head>
+	<meta charset="utf-8"/>
+	<title>UltimaHacks - hack applier (github.com/JohnGlassmyer/UltimaHacks)</title>
+	<script src="https://cdn.rawgit.com/dcodeIO/protobuf.js/6.8.8/dist/protobuf.min.js"></script>
+	<script>
+		var hackMessageType;
+		
+		var old = {};
+		var hack = {};
+		var patched = {};
+		
+		var oldDescription;
+		var hackDescription;
+		var applyButton;
+		var patchedLink;
+		
+		function updateUi() {
+			var oldHtml;
+			if (old.file) {
+				oldHtml = `${old.file.name}<br/>length: ${old.file.size}`;
+			} else {
+				oldHtml = "none selected";
+			}
+			oldDescription.innerHTML = oldHtml;
+			
+			var hackHtml;
+			if (hack.filename) {
+				hackHtml = hack.filename;
+				if (hack.proto) {
+					hackHtml += "<br/>target length: "
+					hackHtml += hack.proto.targetLength
+									? hack.proto.targetLength.value
+									: "unspecified";
+					hackHtml += "<br/>edits: "
+					hackHtml += hack.proto.edit
+									? hack.proto.edit.length
+									: "none";
+					if (hack.proto.comment) {
+						hackHtml += "<br/>comment: " + hack.proto.comment.value;
+					}
+				}
+			} else {
+				hackHtml = "none selected";
+			}
+			hackDescription.innerHTML = hackHtml;
+			
+			applyButton.disabled = !(old.arrayBuffer && hack.proto);
+			
+			if (patched.url) {
+				patchedLink.href = patched.url;
+				patchedLink.download = patched.filename;
+				patchedLink.innerHTML = "💾 patched file: " + patched.filename;
+				patchedLink.parentElement.style.display = "block";
+			} else {
+				patchedLink.parentElement.style.display = "none";
+			}
+		}
+		
+		function oldOnchange(oldFiles) {
+			old = {};
+			URL.revokeObjectURL(patched.url);
+			patched = {};
+			
+			updateUi();
+			
+			old.file = (oldFiles.length == 1) ? oldFiles[0] : undefined;
+			if (old.file) {
+				var fileReader = new FileReader();
+				fileReader.onload = function() {
+					old.arrayBuffer = fileReader.result;
+					
+					updateUi();
+				};
+				
+				fileReader.readAsArrayBuffer(old.file);
+			}
+		}
+		
+		function loadHack(hackFilename, arrayBuffer) {
+			hack = { filename: hackFilename };
+			URL.revokeObjectURL(patched.url);
+			patched = {};
+			
+			updateUi();
+			
+			try {
+				hack.proto = hackMessageType.decode(new Uint8Array(arrayBuffer));
+			} catch (e) {
+				alert(`Error reading hack proto ${hack.filename}: ${e}`);
+			}
+			
+			updateUi();
+		}
+		
+		function hackOnchange(hackFiles) {
+			var hackFile = (hackFiles.length == 1) ? hackFiles[0] : undefined;
+			if (hackFile) {
+				var fileReader = new FileReader();
+				fileReader.onload = function() {
+					loadHack(hackFile.name, fileReader.result);
+				};
+				
+				fileReader.readAsArrayBuffer(hackFile);
+			}
+		}
+		
+		function hackSelectOnchange(select) {
+			var option = select.options[select.selectedIndex];
+			var name = option.innerHTML;
+			var url = option.value;
+			if (url) {
+				var hackRequest = new XMLHttpRequest();
+				hackRequest.addEventListener("load", function(event) {
+					var status = hackRequest.status;
+					if (status == 200) {
+						loadHack(name, hackRequest.response);
+					} else {
+						alert(`failed to GET ${url} (${status})`);
+					}
+				});
+				hackRequest.responseType = "arraybuffer";
+				hackRequest.open("GET", url);
+				hackRequest.send();
+			}
+		}
+		
+		function applyHack(arrayBuffer, hackProto) {
+			var array = new Uint8Array(arrayBuffer);
+			
+			if (hackProto.targetLength
+					&& hackProto.targetLength.value != arrayBuffer.byteLength) {
+				throw `Original file length != target length of hack proto`;
+			}
+			
+			hackProto.edit.forEach(function(edit) {
+				if (edit.copy) {
+					var copy = edit.copy;
+					array.copyWithin(
+							copy.destination, copy.source, copy.source + copy.length);
+				} else if (edit.insert) {
+					var insert = edit.insert;
+					var newArray = new Uint8Array(array.length + insert.length);
+					newArray.set(array.slice(0, insert.start), 0);
+					newArray.set(array.slice(insert.start), insert.start + insert.length);
+					array = newArray;
+				} else if (edit.overwrite) {
+					var overwrite = edit.overwrite;
+					array.set(overwrite.data, overwrite.start);
+				}
+			});
+			
+			return array;
+		}
+		
+		function applyOnclick() {
+			URL.revokeObjectURL(patched.url);
+			patched = {};
+			
+			if (old.arrayBuffer && hack.proto) {
+				try {
+					var patchedArray = applyHack(old.arrayBuffer, hack.proto);
+					var patchedBlob = new Blob(
+							[ patchedArray ],
+							{ type: "application/octet-stream" });
+					
+					patched.url = URL.createObjectURL(patchedBlob);
+					patched.filename = hack.filename + "-" + old.file.name;
+				} catch(e) {
+					alert(e);
+				}
+			}
+			
+			updateUi();
+		}
+		
+		function hackOndrop(e) {
+			e.stopPropagation();
+			e.preventDefault();
+			alert (e);
+		}
+		
+		document.addEventListener("DOMContentLoaded", function(event) {
+			oldDescription = document.querySelector("#oldDescription");
+			hackDescription = document.querySelector("#hackDescription");
+			applyButton = document.querySelector("#applyButton");
+			patchedLink = document.querySelector("#patchedLink");
+			
+			var hackSelect = document.querySelector("#hackSelect");
+			hackSelect.selected = hackSelect.defaultSelected;
+			var repoRaw = "https://raw.githubusercontent.com/JohnGlassmyer"
+					+ "/UltimaHacks/master";
+			for ([name, url] of Object.entries({
+				"u7bg.hack": repoRaw + "/compiled-hacks/u7bg.hack",
+				"u7si.hack": repoRaw + "/compiled-hacks/u7si.hack",
+				"uw1.hack":  repoRaw + "/compiled-hacks/uw1.hack",
+				"uw2.hack":  repoRaw + "/compiled-hacks/uw2.hack",
+			})) {
+				var option = document.createElement("option");
+				option.value = url;
+				option.innerHTML = name;
+				hackSelect.appendChild(option);
+			}
+			
+			protobuf.load("hack.proto").then(function(root) {
+				hackMessageType = root.lookupType(
+						"net.johnglassmyer.ultimahacks.proto.Hack");
+			});
+			
+			updateUi();
+		});
+	</script>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			font-family: sans-serif;
+		}
+		body {
+			text-align: center;
+			background: #334;
+		}
+		body > div {
+			display: inline-block;
+			vertical-align: middle;
+		}
+		.icons {
+			color: #CCB;
+			font-size: 2.25em;
+			margin: 0.5em;
+			opacity: 0.25;
+		}
+		h1 {
+			color: #CCB;
+			font-size: 2em;
+			margin: 0.75em;
+		}
+		h1 > span {
+			font-size: 0.6em;
+			vertical-align: middle;
+		}
+		.section {
+			margin: 1em auto;
+			width: 30em;
+			padding: 1em;
+			border: 1px solid gray;
+			background: #999;
+		}
+		.section > h3 {
+			margin-bottom: 0.5em;
+		}
+		.section > div {
+			padding-left: 1em;
+		}
+		a {
+			color: #AA9;
+			font-weight: bold;
+			text-decoration: none;
+		}
+		input[type="file"] {
+			display: none;
+		}
+		button {
+			width: 14em;
+			height: 1.6em;
+			background: #DDD;
+			font-weight: bold;
+		}
+		.description {
+			padding: 0.25em;
+			margin: 0.5em;
+			background: #222;
+			color: #AAA;
+		}
+		select {
+			text-align: center;
+			background: #DDD;
+			width: 14em;
+			height: 1.6em;
+			font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="icons">
+		⚔ 🐲
+	</div>
+	<div>
+		<h1>Ultima Hacks - hack applier</h1>
+		<div class="section">
+			<h3>original file</h3>
+			<div id="oldDescription" class="description"></div>
+			<div>
+				<input id="oldInput" type="file" onchange="oldOnchange(this.files)">
+				<button onclick="document.querySelector('#oldInput').click()">
+					Select from disk...
+				</button>
+			</div>
+		</div>
+		<div class="section">
+			<h3>hack proto</h3>
+			<div id="hackDescription" class="description"></div>
+			<div>
+				<select id="hackSelect" onchange="hackSelectOnchange(this)">
+					<option value="" selected>Select from list</option>
+				</select>
+				or
+				<input id="hackInput" type="file" onchange="hackOnchange(this.files)">
+				<button onclick="document.querySelector('#hackInput').click()">
+					Select from disk...
+				</button>
+			</div>
+		</div>
+		<div class="section">
+			<h3>patched file</h3>
+			<div>
+				<button id="applyButton" onclick="applyOnclick()">
+					Apply hack to file
+				</button>
+			</div>
+			<div class="description">
+				<a id="patchedLink"></a>
+			</div>
+		</div>
+		<a href="https://github.com/JohnGlassmyer/UltimaHacks">
+			🔗 github.com/JohnGlassmer/UltimaHacks
+		</a>
+	</div>
+	<div class="icons">
+		✨ 💻
+	</div>
+</body>
+
